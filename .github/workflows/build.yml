@@ -1,6 +1,6 @@
-name: Build Windows EXE
+name: Build releases
 
-# 推送 tag（如 v1.0.0）时自动打包 CyberCensus.exe 并发布到 GitHub Releases
+# 推送 tag（如 v1.0.0）时自动打包 Windows / Linux 发行包并发布到 GitHub Releases
 on:
   push:
     tags:
@@ -80,3 +80,55 @@ jobs:
             dist/CyberCensus-win64.zip
             dist/SHA256SUMS.txt
           generate_release_notes: true
+
+  linux:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download enhanced engines (linux amd64)
+        run: |
+          set -euo pipefail
+          mkdir -p build_tools
+          for repo in subfinder httpx nuclei; do
+            url="$(curl -fsSL "https://api.github.com/repos/projectdiscovery/$repo/releases/latest" \
+              | jq -r '.assets[] | select(.name | endswith("linux_amd64.zip")) | .browser_download_url' \
+              | head -n1)"
+            if [ -z "$url" ]; then
+              echo "No linux_amd64 asset for $repo"
+              exit 1
+            fi
+            curl -fsSL "$url" -o "/tmp/$repo.zip"
+            rm -rf "/tmp/$repo"
+            unzip -q "/tmp/$repo.zip" -d "/tmp/$repo"
+            bin="$(find "/tmp/$repo" -type f -name "$repo" | head -n1)"
+            if [ -z "$bin" ]; then
+              echo "binary $repo not found"
+              exit 1
+            fi
+            install -m 0755 "$bin" "build_tools/$repo"
+          done
+
+      - name: Download nuclei templates
+        run: |
+          set -euo pipefail
+          curl -fsSL https://codeload.github.com/projectdiscovery/nuclei-templates/zip/refs/heads/main -o /tmp/tpl.zip
+          rm -rf /tmp/tpl nuclei-templates
+          unzip -q /tmp/tpl.zip -d /tmp/tpl
+          mv /tmp/tpl/nuclei-templates-main nuclei-templates
+          test -n "$(find nuclei-templates -name '*.yaml' | head -n1)"
+
+      - name: Assemble Linux package
+        run: python packaging/pack_linux.py --tools build_tools --templates nuclei-templates
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/CyberCensus-linux-x86_64.tar.gz
+            dist/SHA256SUMS-linux.txt
