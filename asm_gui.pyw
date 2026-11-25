@@ -53,9 +53,14 @@ except ImportError:
         "或直接双击 启动界面.bat（会自动安装）。")
     raise SystemExit(1)
 
-from tkinter import messagebox, filedialog, Menu  # noqa: E402
+from tkinter import messagebox, filedialog, Menu, PhotoImage  # noqa: E402
 
 APP_TITLE = "CyberCensus v%s · 互联网暴露面测绘工具" % cybercensus.__version__
+
+
+def _asset_path(*parts):
+    base = getattr(sys, "_MEIPASS", "") if getattr(sys, "frozen", False) else BASE_DIR
+    return os.path.join(base, *parts)
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 
 # 界面模式选项 -> 流水线模式
@@ -261,6 +266,17 @@ class App(ctk.CTk):
         ctk.set_default_color_theme("blue")
 
         self.title(APP_TITLE)
+        try:
+            png = _asset_path("docs", "logo.png")
+            if os.path.isfile(png):
+                self._icon_img = PhotoImage(file=png)
+                self.iconphoto(True, self._icon_img)
+            else:
+                ico = _asset_path("docs", "logo.ico")
+                if os.path.isfile(ico):
+                    self.iconbitmap(ico)
+        except Exception:
+            pass
         w, h = 1180, 860
         sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
         self.geometry("%dx%d+%d+%d" % (w, h, max(0, (sw - w) // 2),

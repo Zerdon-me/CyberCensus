@@ -28,7 +28,7 @@ jobs:
 
       - name: Build single-file EXE
         run: |
-          pyinstaller --onefile --windowed --name CyberCensus --collect-all customtkinter --collect-all pypinyin asm_gui.pyw
+          pyinstaller --onefile --windowed --name CyberCensus --icon docs/logo.ico --add-data "docs/logo.png;docs" --collect-all customtkinter --collect-all pypinyin asm_gui.pyw
 
       - name: Build standalone wafw00f
         run: |

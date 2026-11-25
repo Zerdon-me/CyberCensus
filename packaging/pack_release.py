@@ -159,6 +159,8 @@ def main():
         print("== 构建 CyberCensus.exe ==")
         cmd = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--onefile",
                "--windowed", "--name", "CyberCensus",
+               "--icon", os.path.join(ROOT, "docs", "logo.ico"),
+               "--add-data", "docs/logo.png;docs",
                "--collect-all", "customtkinter", "--collect-all", "pypinyin",
                "asm_gui.pyw"]
         subprocess.check_call(cmd, cwd=ROOT)
