@@ -6,7 +6,7 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
-[![Platform](https://img.shields.io/badge/Platform-Windows-0078D4.svg)](#)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-0078D4.svg)](#)
 
 **Internet exposure-surface mapping for an organization name, domain, IP, or CIDR.**
 
@@ -29,7 +29,9 @@ Given a target, CyberCensus discovers publicly exposed assets and classifies the
 
 ## Quick start
 
-Download `CyberCensus-win64.zip` from **Releases**, extract, and double-click `CyberCensus.exe`. No Python installation is required.
+**Windows:** download `CyberCensus-win64.zip` from **Releases**, extract, and double-click `CyberCensus.exe`. No Python installation is required.
+
+**Linux (x86_64, CLI):** download `CyberCensus-linux-x86_64.tar.gz`, extract, run `./install.sh` once (creates a venv), then `./cybercensus -n "Org Name"`. The archive bundles Linux builds of subfinder / httpx / nuclei and nuclei-templates. The GUI is Windows-only; on a Linux desktop you can run it from source with `pip3 install customtkinter && python3 asm_gui.pyw`.
 
 From source:
 

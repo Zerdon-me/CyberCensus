@@ -4,7 +4,6 @@
 
 <p align="center"><b>Find every exposed asset. Prove every attribution.</b><br>
 不猜、不堆数量：每一条资产都要有证据。</p>
-
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D4.svg)](#)
@@ -36,6 +35,8 @@
 
 ### 方式一：下载免安装包（推荐，真正解压即用）
 
+**Windows：**
+
 1. 到本仓库的 **Releases** 页面，下载 **`CyberCensus-win64.zip`**（约 138MB）
 2. 解压到任意目录，**双击 `CyberCensus.exe`** 打开软件窗口
 3. 在目标框输入单位名称（如"某某市人民医院"），点 **▶ 开始测绘**；跑完看三张结果卡片，点 **查看报告**——报告开头就有"怎么读这份报告"，每条资产都写明白了"为什么算它的"
@@ -55,6 +56,22 @@
 
 > 也可以只下载 **`CyberCensus.exe`**（约 37MB）：主程序照常运行，只是 subfinder/httpx/wafw00f/nuclei 这四项增强会自动跳过（日志会写"未检测到…"），不影响被动采集、证据分级和报告。
 > ⚠️ SmartScreen 可能提示"未知发布者"（未购买代码签名证书的通病），点"仍要运行"即可。
+
+**Linux（x86_64，命令行）：**
+
+1. 下载 **`CyberCensus-linux-x86_64.tar.gz`**
+2. 解压后进入目录，首次运行 `./install.sh`（创建 `.venv` 并安装 dnspython / cryptography / pypinyin）
+3. 之后直接跑：
+
+```bash
+./cybercensus -n "单位名称"
+./cybercensus -d example.com
+```
+
+包内自带 Linux 版 `subfinder` / `httpx` / `nuclei` 和 `nuclei-templates/`，不需要配 PATH；`wafw00f` 可选安装（`pip install wafw00f`）。
+
+> Linux 包只含命令行。需要图形界面时，在带桌面环境的 Linux 上从源码运行：
+> `pip3 install customtkinter && python3 asm_gui.pyw`（部分发行版需先装 `python3-tk`）。
 
 ### 方式二：从源码运行（需要 Python 3.8+）
 

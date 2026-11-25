@@ -1,0 +1,4 @@
+# Linux / 命令行运行所需依赖（不含 GUI）
+dnspython>=2.1
+cryptography>=3.4
+pypinyin>=0.49
