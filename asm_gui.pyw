@@ -161,7 +161,7 @@ def build_args(mode, platforms, threads=20, provider_pages=1,
                formats=None, sensitive=None, probe_interval=0.0, webhook="",
                ext=True, packages=None, intel="", fast=False, paths=True,
                provider_keyword=False, asn="", scan_asn=False, watch=0,
-               scope_file="", only_scope=False):
+               scope_file="", only_scope=False, keep=0):
     """由界面选择构造 argparse.Namespace（与 CLI 参数一一对应）。
 
     mode: passive / standard / verify / active
@@ -219,6 +219,7 @@ def build_args(mode, platforms, threads=20, provider_pages=1,
         scope=[],
         scope_file=scope_file or "",
         only_scope=bool(only_scope),
+        keep=max(0, int(keep or 0)),
         yes=True,   # 授权确认由界面勾选框承担，不再走 input()
     )
     # 端口列表（与 CLI main 相同的优先级：自定义 > top > 内置全表）
@@ -1052,6 +1053,15 @@ class App(ctk.CTk):
                       ).grid(row=13, column=0, columnspan=6, sticky="w",
                              padx=(14, 0), pady=(0, 6))
 
+        ctk.CTkLabel(f, text="报告保留").grid(row=14, column=0, sticky="e",
+                                              padx=(14, 4), pady=(0, 6))
+        self.var_keep = ctk.StringVar(value="0")
+        ctk.CTkEntry(f, textvariable=self.var_keep, width=80,
+                     placeholder_text="0").grid(row=14, column=1, sticky="w")
+        ctk.CTkLabel(f, text="轮；0=不清理。长期巡航建议 20~50，只删旧报告不动基线",
+                     font=self.f_mono_sm, text_color=GRAY
+                     ).grid(row=14, column=2, columnspan=4, sticky="w", padx=(0, 10))
+
         ctk.CTkLabel(win, text="提示：平台翻页越多越慢、越费配额；全端口扫描建议仅在授权窗口期使用。",
                      font=self.f_mono_sm, text_color=GRAY
                      ).pack(anchor="w", padx=22, pady=(2, 0))
@@ -1751,6 +1761,7 @@ class App(ctk.CTk):
             watch=_to_int(self.var_watch.get(), 0),
             scope_file=self.var_scope_file.get().strip(),
             only_scope=self.var_only_scope.get(),
+            keep=_to_int(self.var_keep.get(), 0),
         )
         self._last_out_dir = args.out
         self._last_watch = max(0, int(getattr(args, "watch", 0) or 0))

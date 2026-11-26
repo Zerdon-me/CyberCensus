@@ -49,7 +49,7 @@ import gzip
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
-__version__ = "0.11.0"
+__version__ = "0.11.1"
 
 # ----------------------------------------------------------------------------
 # 可选依赖
