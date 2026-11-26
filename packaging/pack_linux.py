@@ -33,7 +33,7 @@ NAME = "CyberCensus-linux-x86_64"
 TOOL_NAMES = ("subfinder", "httpx", "nuclei")
 
 TOP_FILES = ("cybercensus.py", "providers.py", "tool_updater.py",
-             "requirements-cli.txt", "README.md", "README.en.md",
+             "port_presets.py", "requirements-cli.txt", "README.md", "README.en.md",
              "LICENSE", "NOTICE", "COMMERCIAL.md", "SECURITY.md",
              "CHANGELOG.md")
 

@@ -157,7 +157,7 @@ def parse_targets(text):
 
 
 def build_args(mode, platforms, threads=20, provider_pages=1,
-               cscan=False, top=0, ports="", full_ports=False,
+               cscan=False, top=0, ports="", ports_file="", full_ports=False,
                out="cybercensus_out", config=CONFIG_PATH, debug_provider=False,
                formats=None, sensitive=None, probe_interval=0.0, webhook="",
                ext=True, packages=None, intel="", fast=False, paths=True,
@@ -197,6 +197,7 @@ def build_args(mode, platforms, threads=20, provider_pages=1,
         full_ports=bool(full_ports),
         top=int(top),
         ports=ports,
+        ports_file=ports_file or "",
         quiet=False,
         providers=(list(platforms) if platforms else None),
         provider_pages=max(1, int(provider_pages)),
@@ -223,11 +224,16 @@ def build_args(mode, platforms, threads=20, provider_pages=1,
         keep=max(0, int(keep or 0)),
         yes=True,   # 授权确认由界面勾选框承担，不再走 input()
     )
-    # 端口列表（与 CLI main 相同的优先级：自定义 > top > 内置全表）
-    if ports:
+    # 端口列表（与 CLI main 相同的优先级：字典 > 自定义 > top > 内置全表）
+    if ports_file:
+        try:
+            args.ports_list = cybercensus.parse_ports_file(ports_file)
+        except Exception:
+            args.ports_list = list(cybercensus.DEFAULT_PORTS)
+    elif ports:
         args.ports_list = cybercensus.parse_ports(ports)
     elif args.top > 0:
-        args.ports_list = list(cybercensus.DEFAULT_PORTS[:args.top])
+        args.ports_list = cybercensus.top_ports(args.top)
     else:
         args.ports_list = list(cybercensus.DEFAULT_PORTS)
     if not args.ports_list:
@@ -945,7 +951,8 @@ class App(ctk.CTk):
                       ).grid(row=0, column=4, sticky="w", padx=16)
 
         ctk.CTkLabel(f, text="常用端口前N").grid(row=1, column=0, sticky="e", padx=(14, 4), pady=6)
-        self.cmb_top = ctk.CTkComboBox(f, values=["0", "50", "100", "200"], width=90)
+        self.cmb_top = ctk.CTkComboBox(
+            f, values=["0", "50", "100", "200", "1000", "10000"], width=90)
         self.cmb_top.set("0")
         self.cmb_top.grid(row=1, column=1, sticky="w")
         ctk.CTkLabel(f, text="自定义端口").grid(row=1, column=2, sticky="e", padx=(16, 4))
@@ -1065,6 +1072,15 @@ class App(ctk.CTk):
         ctk.CTkLabel(f, text="轮；0=不清理。长期巡航建议 20~50，只删旧报告不动基线",
                      font=self.f_mono_sm, text_color=GRAY
                      ).grid(row=14, column=2, columnspan=4, sticky="w", padx=(0, 10))
+
+        ctk.CTkLabel(f, text="端口字典").grid(row=15, column=0, sticky="e",
+                                              padx=(14, 4), pady=(0, 6))
+        self.var_ports_file = ctk.StringVar(value="")
+        ctk.CTkEntry(f, textvariable=self.var_ports_file,
+                     placeholder_text="端口字典文件：每行/逗号分隔，支持 8000-8100 与 # 注释"
+                     ).grid(row=15, column=1, columnspan=4, sticky="we", padx=(0, 4))
+        ctk.CTkButton(f, text="文件…", width=64, command=self._pick_ports_file
+                      ).grid(row=15, column=5, sticky="w", padx=(6, 14))
 
         ctk.CTkLabel(win, text="提示：平台翻页越多越慢、越费配额；全端口扫描建议仅在授权窗口期使用。",
                      font=self.f_mono_sm, text_color=GRAY
@@ -1268,6 +1284,11 @@ class App(ctk.CTk):
         keep = _to_int(self.var_keep.get(), 0)
         if keep > 0:
             argv += ["--keep", str(keep)]
+        if self.var_ports_file.get().strip():
+            argv += ["--ports-file", self.var_ports_file.get().strip()]
+        top = _to_int(self.cmb_top.get(), 0)
+        if top > 0:
+            argv += ["--top", str(top)]
         if self.var_scope_file.get().strip():
             argv += ["--scope-file", self.var_scope_file.get().strip()]
         if self.var_only_scope.get():
@@ -1870,6 +1891,13 @@ class App(ctk.CTk):
             cur = self.var_packages.get().strip()
             self.var_packages.set((cur + ";" if cur else "") + d)
 
+    def _pick_ports_file(self):
+        p = filedialog.askopenfilename(
+            title="选择端口字典（每行/逗号分隔，支持 8000-8100）",
+            filetypes=[("文本文件", "*.txt *.lst *.csv"), ("所有文件", "*.*")])
+        if p:
+            self.var_ports_file.set(p)
+
     def _pick_scope_file(self):
         p = filedialog.askopenfilename(
             title="选择资产范围文件（每行一个 URL/域名/IP）",
@@ -1988,6 +2016,7 @@ class App(ctk.CTk):
             cscan=self.var_cscan.get(),
             top=_to_int(self.cmb_top.get(), 0),
             ports=self.var_ports.get().strip(),
+            ports_file=self.var_ports_file.get().strip(),
             full_ports=self.var_fullports.get(),
             out=outdir,
             debug_provider=self.var_debug.get(),

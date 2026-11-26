@@ -8,7 +8,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D4.svg)](#)
-[![Version](https://img.shields.io/badge/version-0.11.2-22d3ee.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.12.0-22d3ee.svg)](CHANGELOG.md)
 
 <p align="center"><img src="docs/social-preview.png" alt="CyberCensus - Find every exposed asset. Prove every attribution." width="900"></p>
 
@@ -119,6 +119,7 @@ pyinstaller --onefile --windowed --name CyberCensus --collect-all customtkinter 
 - **多选与批量操作**：表格第一列是复选框，点表头下方「☐ 全选」可选中当前列表（受卡片筛选/搜索框影响），也可 Ctrl+A；选中后可**批量标记确认/疑似/存疑**，不用再一个个点详情
 - **定时巡航面板**：表格上方「定时巡航」标签页可载入 tasks.json，查看每个任务的下次运行时间与状态，一键**启动/停止后台巡航**、**立即执行一次**；点「+ 当前目标」会把当前目标、模式、输出目录、范围文件、保留轮数自动写成一条任务，不用手写 JSON
 - **资产范围与保留**：高级参数里可选择范围文件、勾选「只看范围内/相似资产」、设置「报告保留 N 轮」，全部在界面完成
+- **端口预设与字典**：高级参数可选择 top 100 / 1000 / 10000、自定义端口或上传端口字典文件；全端口扫描仍保留
 - **复制与导出**：选中后「复制URL」/「复制主机」直接进剪贴板，方便粘贴到浏览器或扫描器；「导出选中CSV」保存主机、IP、端口、URL、归属说明与完整证据
 - **搜索与排序**：表头上方搜索框按主机/IP/标题实时过滤；点击任意表头按该列升序/降序排序（带 ▲▼ 指示）
 - **右键菜单**：表格行右键可直接查看详情、批量改判、复制 URL/主机；Ctrl+C 复制选中 URL
@@ -188,7 +189,7 @@ pyinstaller --onefile --windowed --collect-all customtkinter --collect-all pypin
 
 | 功能 | 作用 | 触发 |
 |------|------|------|
-| 端口扫描 | 常见端口/自定义端口/全端口，socket 连接 | `--active` |
+| 端口扫描 | TOP100 / TOP1000 / TOP10000 / 自定义端口 / 端口字典 / 全端口，socket 连接 | `--active` |
 | HTTP 探测 | 标题、服务器、指纹、备案号、统计 ID、favicon、证书 O= | 标准模式探测锚点；active 探测存活端口 |
 | 敏感路径 | 18 条高信噪比规则：`.git`/`.env`/Actuator/Swagger/Druid/phpinfo/备份包…每条都做内容验证 | active 默认开；`--sensitive`；`--no-sensitive` |
 | 路径 / 接口线索 | robots.txt、sitemap.xml、前端 JS 路径、Wayback 路径 | 默认开；`--no-paths`/`--path-limit` |
@@ -268,7 +269,7 @@ pyinstaller --onefile --windowed --collect-all customtkinter --collect-all pypin
 | 参数组 | 区别 |
 |--------|------|
 | `--verify` vs `--probe-found` | 前者只复核“疑似资产”；后者对被动发现的主机做一轮 HTTP 探测（范围更大） |
-| `--top` vs `--ports` vs `--full-ports` | 前 N 个常见端口 / 自定义端口（优先于 top）/ 1-65535 全端口（很慢） |
+| `--top` / `--ports` / `--ports-file` / `--full-ports` | 频率预设 100/1000/10000 / 自定义端口 / 用户端口字典（优先于 top）/ 1-65535 全端口（很慢） |
 | `--timeout` vs `--scan-timeout` | HTTP/TLS 超时 / TCP 端口连接超时，两者独立 |
 
 ### 本轮代码体检（已清理）
@@ -441,7 +442,8 @@ run.bat -d xx.gov.cn
 | `--scope-file FILE` | 从文件读取资产范围（每行一个 URL/域名/IP） |
 | `--only-scope` | 只保留范围内/相似资产，过滤无关资产 |
 | `--full-ports` | 全端口 1-65535（很慢） |
-| `--top N` | 只扫前 N 个常见端口 |
+| `--top N` | 按 nmap-services 频率取前 N 个端口：常用 **100 / 1000 / 10000**（约 8400 个） |
+| `--ports-file FILE` | 端口字典文件：每行/逗号/空格分隔，支持 `8000-8100` 与 `#` 注释 |
 | `--ports` | 自定义端口，如 `"80,443,8000-8100"`（优先于 `--top`） |
 | `--probe-found` | 被动模式下对发现的主机做轻量 HTTP 探测 |
 | `--probe-limit` | `--probe-found` 上限，默认 100 |

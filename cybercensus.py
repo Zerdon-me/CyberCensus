@@ -46,10 +46,15 @@ import urllib.request
 import zipfile
 import zlib
 import gzip
+
+try:
+    import port_presets
+except Exception:          # 单文件运行/裁剪包时退化为内置小表
+    port_presets = None
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
-__version__ = "0.11.2"
+__version__ = "0.12.0"
 
 # ----------------------------------------------------------------------------
 # 可选依赖
@@ -7313,8 +7318,10 @@ def apply_fast_mode(args):
 
 
 def parse_ports(s):
+    """解析端口串：逗号/空格/分号/换行分隔，支持 80、443、8000-8100、# 注释。"""
     ports = set()
-    for part in s.split(","):
+    text = "\n".join(line.split("#", 1)[0] for line in str(s or "").splitlines())
+    for part in re.split(r"[\s,;]+", text):
         part = part.strip()
         if not part:
             continue
@@ -7334,6 +7341,19 @@ def parse_ports(s):
             except Exception:
                 pass
     return sorted(ports)
+
+
+def parse_ports_file(path):
+    """读取端口字典文件（每行/逗号/空格分隔，支持范围和 # 注释）。"""
+    with open(path, "r", encoding="utf-8-sig", errors="replace") as f:
+        return parse_ports(f.read())
+
+
+def top_ports(n):
+    """按 nmap-services 频率取前 n 个端口；无预设模块时退回内置表。"""
+    if not port_presets:
+        return list(DEFAULT_PORTS[:n]) if n <= len(DEFAULT_PORTS) else list(DEFAULT_PORTS)
+    return list(port_presets.TOP_PORTS[:n])
 
 
 def build_parser():
@@ -7377,6 +7397,8 @@ def build_parser():
     p.add_argument("--full-ports", action="store_true", help="全端口 1-65535（很慢）")
     p.add_argument("--top", type=int, default=0, help="使用前 N 个常见端口")
     p.add_argument("--ports", default="", help='自定义端口，如 "80,443,8000-8100"')
+    p.add_argument("--ports-file", default="",
+                   help="端口字典文件：每行/逗号/空格分隔，支持 8000-8100 和 # 注释")
     p.add_argument("--threads", type=int, default=20, help="并发数（默认20）")
     p.add_argument("--timeout", type=float, default=10, help="超时秒数（默认10）")
     p.add_argument("--scan-timeout", type=float, default=2.5, dest="scan_timeout",
@@ -7973,14 +7995,25 @@ def main():
         print("\n错误：至少提供 名称 / 域名 / IP 之一。")
         return 2
 
-    # 端口列表
-    if args.ports:
+    # 端口列表：全端口 > 端口字典 > 自定义端口 > --top 预设/数量 > 内置常见表
+    if args.full_ports:
+        args.ports_list = list(DEFAULT_PORTS)
+    elif getattr(args, "ports_file", ""):
+        try:
+            args.ports_list = parse_ports_file(args.ports_file)
+        except Exception as e:
+            print("[错误] 端口字典读取失败：%s" % str(e)[:120])
+            return 2
+        if not args.ports_list:
+            print("[错误] 端口字典为空：%s" % args.ports_file)
+            return 2
+    elif args.ports:
         args.ports_list = parse_ports(args.ports)
     elif args.top and args.top > 0:
-        if args.top > len(DEFAULT_PORTS):
-            print("[!] --top %d 超过内置常见端口表长度 %d，已截断为内置全表"
-                  % (args.top, len(DEFAULT_PORTS)))
-        args.ports_list = DEFAULT_PORTS[:args.top]
+        args.ports_list = top_ports(args.top)
+        if args.top > len(args.ports_list):
+            print("[!] --top %d 超过预设端口表长度 %d，已使用全部"
+                  % (args.top, len(args.ports_list)))
     else:
         args.ports_list = list(DEFAULT_PORTS)
     if not args.ports_list:

@@ -178,7 +178,7 @@ class TestBuildArgs(unittest.TestCase):
 
     def test_ports_priority(self):
         args = gui.build_args("standard", [], top=5)
-        self.assertEqual(args.ports_list, list(gui.cybercensus.DEFAULT_PORTS[:5]))
+        self.assertEqual(args.ports_list, list(gui.cybercensus.top_ports(5)))
         args = gui.build_args("standard", [], ports="80,443")
         self.assertEqual(args.ports_list, [80, 443])
         args = gui.build_args("standard", [], top=5, ports="8000-8002")
