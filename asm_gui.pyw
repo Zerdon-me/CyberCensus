@@ -28,6 +28,7 @@ import sys
 import threading
 import time
 import traceback
+import webbrowser
 
 # PyInstaller 单文件模式下 __file__ 指向临时解压目录（_MEIPASS），
 # config.json / 输出目录必须定位到 exe 所在目录
@@ -63,6 +64,9 @@ def _asset_path(*parts):
     base = getattr(sys, "_MEIPASS", "") if getattr(sys, "frozen", False) else BASE_DIR
     return os.path.join(base, *parts)
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
+TERMS_URL = "https://github.com/Zerdon-me/CyberCensus/blob/main/TERMS.md"
+TERMS_PATH = os.path.join(BASE_DIR, "TERMS.md")
+TERMS_ACCEPTED = os.path.join(BASE_DIR, ".terms_accepted")
 
 # 界面模式选项 -> 流水线模式
 MODE_MAP = {"被动": "passive", "标准": "standard", "复核": "verify", "主动": "active"}
@@ -337,6 +341,7 @@ class App(ctk.CTk):
         self.after(100, self._poll)
         self.after(2000, self._tick_eta)
         self.after(3000, self._cruise_poll)
+        self.after(250, self._check_terms)
 
     # ------------------------------------------------------------------
     # 品牌头栏（横贯顶部）
@@ -453,7 +458,12 @@ class App(ctk.CTk):
                       height=34, corner_radius=8, fg_color="transparent",
                       border_width=1, border_color=STROKE, hover_color=CARD_HI,
                       text_color=TEXT, font=self.f_body
-                      ).pack(fill="x", padx=12, pady=12)
+                      ).pack(fill="x", padx=12, pady=(12, 6))
+        ctk.CTkButton(card2, text="ⓘ  关于 / 使用条款", command=self._open_about,
+                      height=30, corner_radius=8, fg_color="transparent",
+                      border_width=1, border_color=STROKE, hover_color=CARD_HI,
+                      text_color=GRAY, font=self.f_mono_sm
+                      ).pack(fill="x", padx=12, pady=(0, 12))
 
         # ---- 底部图例 ----
         legend = ctk.CTkFrame(sb, fg_color="transparent")
@@ -1911,6 +1921,126 @@ class App(ctk.CTk):
             filetypes=[("JSON", "*.json"), ("所有文件", "*.*")])
         if p:
             self.var_intel.set(p)
+
+    # ---- 首次启动条款确认 ----
+    def _open_terms(self):
+        if os.path.isfile(TERMS_PATH):
+            try:
+                os.startfile(TERMS_PATH)   # noqa: S606
+                return
+            except Exception:
+                pass
+        webbrowser.open(TERMS_URL)
+
+    def _check_terms(self):
+        if os.path.isfile(TERMS_ACCEPTED):
+            return
+        win = ctk.CTkToplevel(self)
+        win.title("使用条款确认 · CyberCensus")
+        win.geometry("640x520")
+        win.configure(fg_color=BG)
+        win.transient(self)
+        win.protocol("WM_DELETE_WINDOW", self.destroy)
+        win.after(300, lambda: win.grab_set())
+
+        ctk.CTkLabel(win, text="// 使用前请确认", font=self.f_mono,
+                     text_color=ACCENT, anchor="w").pack(fill="x", padx=20, pady=(16, 4))
+        ctk.CTkLabel(win, text="CyberCensus 仅限自有资产或已获明确书面授权的目标使用",
+                     font=ctk.CTkFont(size=15, weight="bold"),
+                     text_color=TEXT, anchor="w").pack(fill="x", padx=20)
+
+        txt = ctk.CTkTextbox(win, fg_color="#08101c", text_color=TEXT,
+                             font=self.f_mono_sm, corner_radius=8,
+                             border_width=1, border_color=STROKE)
+        txt.pack(fill="both", expand=True, padx=20, pady=12)
+        txt.insert("end",
+                   "使用本工具前，请确认：\n\n"
+                   "1. 你只对本人拥有所有权的资产，或已取得资产所有者明确、"
+                   "书面、可追溯授权的目标进行测绘、扫描或探测；\n"
+                   "2. 你已阅读并同意 TERMS.md 中的使用条款与免责声明；\n"
+                   "3. 你不得将本工具用于未授权扫描、非法入侵、拒绝服务、"
+                   "弱口令爆破、验证码/风控绕过、数据窃取、恶意代码传播等行为；\n"
+                   "4. 主动扫描会真实访问目标，请自行控制范围、并发与时间窗口，"
+                   "并自行承担合规与操作风险。\n\n"
+                   "完整条款：TERMS.md（随程序附带，也可点击下方按钮打开）\n"
+                   "项目地址：https://github.com/Zerdon-me/CyberCensus\n")
+        txt.configure(state="disabled")
+
+        var = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(win, text="我已阅读并同意 TERMS.md，且仅对自有或已获书面授权的目标使用",
+                        variable=var, font=self.f_body,
+                        fg_color=ACCENT, hover_color=ACCENT_HOVER
+                        ).pack(anchor="w", padx=22, pady=(0, 8))
+
+        row = ctk.CTkFrame(win, fg_color="transparent")
+        row.pack(fill="x", padx=20, pady=(0, 16))
+        ctk.CTkButton(row, text="阅读完整条款", width=120,
+                      fg_color="transparent", border_width=1, border_color=STROKE,
+                      text_color=TEXT, hover_color=CARD_HI,
+                      command=self._open_terms).pack(side="left")
+        ctk.CTkButton(row, text="退出", width=80,
+                      fg_color="transparent", border_width=1, border_color=STROKE,
+                      text_color=GRAY, hover_color=CARD_HI,
+                      command=self.destroy).pack(side="right")
+        btn = ctk.CTkButton(row, text="同意并继续", width=120,
+                            fg_color=ACCENT, text_color="#04141a",
+                            hover_color=ACCENT_HOVER, state="disabled",
+                            command=lambda: self._accept_terms(win))
+        btn.pack(side="right", padx=8)
+        var.trace_add("write", lambda *_: btn.configure(
+            state="normal" if var.get() else "disabled"))
+
+    def _accept_terms(self, win):
+        try:
+            with open(TERMS_ACCEPTED, "w", encoding="utf-8") as f:
+                f.write("accepted %s\n" % cybercensus.__version__)
+        except Exception:
+            pass
+        try:
+            win.grab_release()
+        except Exception:
+            pass
+        win.destroy()
+        self._append_log("已确认使用条款（仅限自有或已获书面授权的目标）", "+")
+
+    # ---- 关于 ----
+    def _open_about(self):
+        win = ctk.CTkToplevel(self)
+        win.title("关于 CyberCensus")
+        win.geometry("520x360")
+        win.configure(fg_color=BG)
+        win.transient(self)
+        win.after(250, lambda: win.grab_set())
+        ctk.CTkLabel(win, text="CyberCensus", font=self.f_brand,
+                     text_color=TEXT).pack(anchor="w", padx=24, pady=(20, 0))
+        ctk.CTkLabel(win, text="互联网暴露面测绘工具 · v%s"
+                     % cybercensus.__version__, font=self.f_body,
+                     text_color=ACCENT).pack(anchor="w", padx=24, pady=(0, 10))
+        for line in (
+                "许可证：Apache-2.0",
+                "仅限自有资产或已获明确书面授权的目标使用。",
+                "默认被动优先；主动扫描会真实访问目标，请先确认授权。",
+                "项目：https://github.com/Zerdon-me/CyberCensus",
+                "条款：TERMS.md（使用条款与免责声明）"):
+            ctk.CTkLabel(win, text=line, font=self.f_mono_sm,
+                         text_color=GRAY, wraplength=470, justify="left",
+                         anchor="w").pack(fill="x", padx=24, pady=2)
+        row = ctk.CTkFrame(win, fg_color="transparent")
+        row.pack(fill="x", padx=20, pady=(16, 12))
+        ctk.CTkButton(row, text="打开 TERMS", width=110,
+                      fg_color="transparent", border_width=1, border_color=STROKE,
+                      text_color=TEXT, hover_color=CARD_HI,
+                      command=self._open_terms).pack(side="left")
+        ctk.CTkButton(row, text="打开 GitHub", width=110,
+                      fg_color="transparent", border_width=1, border_color=STROKE,
+                      text_color=ACCENT, hover_color=CARD_HI,
+                      command=lambda: webbrowser.open(
+                          "https://github.com/Zerdon-me/CyberCensus")
+                      ).pack(side="left", padx=8)
+        ctk.CTkButton(row, text="关闭", width=80,
+                      fg_color=ACCENT, text_color="#04141a",
+                      hover_color=ACCENT_HOVER,
+                      command=win.destroy).pack(side="right")
 
     # ---- Key 配置对话框 ----
     def _open_key_dialog(self):

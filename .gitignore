@@ -23,6 +23,7 @@ dist/
 *.spec
 
 # 运行期/本地敏感文件
+.terms_accepted
 .env
 .env.*
 .upload_token

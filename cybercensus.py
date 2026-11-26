@@ -54,7 +54,7 @@ except Exception:          # 单文件运行/裁剪包时退化为内置小表
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
-__version__ = "0.12.0"
+__version__ = "0.13.0"
 
 # ----------------------------------------------------------------------------
 # 可选依赖
@@ -6442,6 +6442,12 @@ class Engine(object):
         if self.args.active:
             L.append("- 本次包含**主动扫描**，请确认在授权范围内。")
         L.append("")
+        L.append("---")
+        L.append("> **授权声明**：本报告仅限自有资产或已获明确书面授权的目标使用，"
+                 "使用者自行承担合规与操作风险。完整条款见 `TERMS.md`。")
+        L.append("> 项目：https://github.com/Zerdon-me/CyberCensus · "
+                 "Apache-2.0 · CyberCensus v%s" % __version__)
+        L.append("")
         return "\n".join(L)
 
 
@@ -6796,6 +6802,11 @@ class Engine(object):
 })();
 </script>""" % gjson)
 
+        parts.append(
+            "<hr><p class='muted'><b>授权声明</b>：本报告仅限自有资产或已获明确书面授权的目标使用，"
+            "使用者自行承担合规与操作风险。完整条款见 TERMS.md。<br>"
+            "项目：https://github.com/Zerdon-me/CyberCensus · Apache-2.0 · "
+            "CyberCensus v%s</p>" % esc(__version__))
         parts.append("</body></html>")
         return "\n".join(parts)
 

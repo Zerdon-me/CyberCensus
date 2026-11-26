@@ -75,7 +75,7 @@ The full documentation is currently in Chinese: [README.md](README.md). It cover
 
 ## Legal & security
 
-- [TERMS.md](TERMS.md) — terms of use, prohibited actions, warranty disclaimer, liability limitation (Chinese)
+- [TERMS.en.md](TERMS.en.md) / [TERMS.md](TERMS.md) — terms of use, prohibited actions, warranty disclaimer, liability limitation (English / Chinese)
 - [SECURITY.md](SECURITY.md) — authorized-use policy and private vulnerability reporting
 - [CONTRIBUTING.md](CONTRIBUTING.md) — development setup and contribution rules
 - [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) — dependency and bundled-tool licenses

@@ -8,7 +8,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D4.svg)](#)
-[![Version](https://img.shields.io/badge/version-0.12.0-22d3ee.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.13.0-22d3ee.svg)](CHANGELOG.md)
 
 <p align="center"><img src="docs/social-preview.png" alt="CyberCensus - Find every exposed asset. Prove every attribution." width="900"></p>
 
@@ -120,6 +120,8 @@ pyinstaller --onefile --windowed --name CyberCensus --collect-all customtkinter 
 - **定时巡航面板**：表格上方「定时巡航」标签页可载入 tasks.json，查看每个任务的下次运行时间与状态，一键**启动/停止后台巡航**、**立即执行一次**；点「+ 当前目标」会把当前目标、模式、输出目录、范围文件、保留轮数自动写成一条任务，不用手写 JSON
 - **资产范围与保留**：高级参数里可选择范围文件、勾选「只看范围内/相似资产」、设置「报告保留 N 轮」，全部在界面完成
 - **端口预设与字典**：高级参数可选择 top 100 / 1000 / 10000、自定义端口或上传端口字典文件；全端口扫描仍保留
+- **首次启动条款确认**：第一次打开会要求确认“仅限自有或已获书面授权的目标 + 已阅读 TERMS”，同意后才能扫描；左侧「关于 / 使用条款」可随时查看版本、许可证和条款
+- **报告页脚**：导出的 HTML/PDF/Word/TXT/Markdown 报告自动带授权声明、项目链接和版本号
 - **复制与导出**：选中后「复制URL」/「复制主机」直接进剪贴板，方便粘贴到浏览器或扫描器；「导出选中CSV」保存主机、IP、端口、URL、归属说明与完整证据
 - **搜索与排序**：表头上方搜索框按主机/IP/标题实时过滤；点击任意表头按该列升序/降序排序（带 ▲▼ 指示）
 - **右键菜单**：表格行右键可直接查看详情、批量改判、复制 URL/主机；Ctrl+C 复制选中 URL
@@ -815,7 +817,7 @@ A：所有平台差异都集中在 `providers.py`。改 `translate()`（查询�
 
 - **许可证**：[Apache-2.0](LICENSE) —— 可自由使用、修改、分发、商用，含专利授权；需保留版权/NOTICE、标明修改。版权人见 [NOTICE](NOTICE)。
 - **开源核心 / 商业服务**：[COMMERCIAL.md](COMMERCIAL.md) —— 核心全部开源；私有规则包、私有化实施、托管监控、报告复核、定制与 SLA 作为商业服务，不放进仓库。
-- **使用条款与免责声明**：[TERMS.md](TERMS.md) —— 授权要求、明确禁止行为、责任限制、赔偿与争议解决。
+- **使用条款与免责声明**：[TERMS.md](TERMS.md)（[English](TERMS.en.md)）—— 授权要求、明确禁止行为、责任限制、赔偿与争议解决。
 - **安全政策**：[SECURITY.md](SECURITY.md) —— 授权使用边界、漏洞私下报告方式、凭据与数据约定。
 - **贡献指南**：[CONTRIBUTING.md](CONTRIBUTING.md) —— 开发环境、测试要求、平台适配扩展方式、不接受的功能类型。
 - **第三方组件**：[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) —— Python 依赖与随包分发的 subfinder/httpx/nuclei/wafw00f 许可。
