@@ -23,6 +23,7 @@ import json
 import os
 import queue
 import re
+import subprocess
 import sys
 import threading
 import time
@@ -329,6 +330,7 @@ class App(ctk.CTk):
         self.bind("<Control-Return>", lambda e: self._on_start())
         self.after(100, self._poll)
         self.after(2000, self._tick_eta)
+        self.after(3000, self._cruise_poll)
 
     # ------------------------------------------------------------------
     # 品牌头栏（横贯顶部）
@@ -764,6 +766,7 @@ class App(ctk.CTk):
         tab_assets = self.tabview.add("资产列表")
         tab_apps = self.tabview.add("APP 应用")
         tab_log = self.tabview.add("运行日志")
+        tab_cruise = self.tabview.add("定时巡航")
 
         import tkinter.ttk as ttk
         self.lbl_filter = ctk.CTkLabel(
@@ -860,6 +863,7 @@ class App(ctk.CTk):
         self.txt_log.pack(fill="both", expand=True)
         self.txt_log.configure(state="disabled")
         self._apply_log_palette("dark")
+        self._build_cruise_tab(tab_cruise)
         self.tabview.set("运行日志")
 
         # ---- 底部操作（先 pack 到底部，保证标签页不会把它挤掉） ----
@@ -1117,6 +1121,246 @@ class App(ctk.CTk):
             self.sw_auth.pack(side="right", padx=(0, 6))
         else:
             self.sw_auth.pack_forget()
+
+    # ---- 定时巡航面板（GUI 版 --tasks） ----
+    def _build_cruise_tab(self, tab):
+        import tkinter.ttk as ttk
+        top = ctk.CTkFrame(tab, fg_color="transparent")
+        top.pack(fill="x", pady=(4, 4))
+        ctk.CTkLabel(top, text="任务文件").pack(side="left", padx=(0, 6))
+        self.var_cruise_file = ctk.StringVar(
+            value=os.path.join(BASE_DIR, "tasks.json"))
+        ctk.CTkEntry(top, textvariable=self.var_cruise_file, width=330
+                     ).pack(side="left")
+        ctk.CTkButton(top, text="浏览…", width=62, command=self._cruise_pick
+                      ).pack(side="left", padx=6)
+        ctk.CTkButton(top, text="刷新", width=56, command=self._cruise_reload
+                      ).pack(side="left")
+        ctk.CTkButton(top, text="+ 当前目标", width=96,
+                      command=self._cruise_add_current).pack(side="left", padx=6)
+        self.btn_cruise_stop = ctk.CTkButton(
+            top, text="■ 停止", width=70, state="disabled",
+            command=self._cruise_stop)
+        self.btn_cruise_stop.pack(side="right")
+        self.btn_cruise_start = ctk.CTkButton(
+            top, text="▶ 启动后台巡航", width=124, fg_color=ACCENT,
+            text_color="#04141a", command=self._cruise_start)
+        self.btn_cruise_start.pack(side="right", padx=6)
+        ctk.CTkButton(top, text="立即执行一次", width=100,
+                      command=self._cruise_once).pack(side="right", padx=6)
+
+        self.lbl_cruise = ctk.CTkLabel(tab, text="", font=self.f_mono_sm,
+                                       text_color=GRAY, anchor="w")
+        self.lbl_cruise.pack(fill="x", pady=(0, 4))
+
+        cols = ("任务", "周期", "上次运行", "下次运行", "状态")
+        widths = (220, 80, 150, 150, 260)
+        self.tree_cruise = ttk.Treeview(tab, columns=cols, show="headings",
+                                        selectmode="browse")
+        for c, w in zip(cols, widths):
+            self.tree_cruise.heading(c, text=c)
+            self.tree_cruise.column(c, width=w, anchor="w")
+        vsb = ttk.Scrollbar(tab, orient="vertical",
+                            command=self.tree_cruise.yview)
+        self.tree_cruise.configure(yscrollcommand=vsb.set)
+        self.tree_cruise.pack(side="left", fill="both", expand=True)
+        vsb.pack(side="right", fill="y")
+        self._cruise_proc = None
+        self._cruise_reload()
+
+    def _cruise_pick(self):
+        p = filedialog.askopenfilename(
+            title="选择定时巡航任务文件",
+            filetypes=[("JSON", "*.json"), ("所有文件", "*.*")])
+        if p:
+            self.var_cruise_file.set(p)
+            self._cruise_reload()
+
+    def _cruise_path(self):
+        return self.var_cruise_file.get().strip() or os.path.join(BASE_DIR, "tasks.json")
+
+    def _cruise_reload(self):
+        if not hasattr(self, "tree_cruise"):
+            return
+        self.tree_cruise.delete(*self.tree_cruise.get_children())
+        p = self._cruise_path()
+        if not os.path.isfile(p):
+            self.lbl_cruise.configure(text="任务文件不存在：%s" % p, text_color=ORANGE)
+            return
+        try:
+            tasks = cybercensus.load_task_file(p)
+        except Exception as e:
+            self.lbl_cruise.configure(text="任务文件解析失败：%s" % str(e)[:100],
+                                      text_color=RED)
+            return
+        try:
+            with open(p + ".state.json", "r", encoding="utf-8") as f:
+                state = json.load(f)
+        except Exception:
+            state = {}
+        now = time.time()
+        for i, t in enumerate(tasks):
+            name = cybercensus._task_name(t, i)
+            st = state.get(name) or {}
+            last = float(st.get("last_run") or 0)
+            every = cybercensus.parse_interval(t.get("every"), 86400)
+            nxt = "待运行" if not last else time.strftime(
+                "%Y-%m-%d %H:%M", time.localtime(last + every))
+            enabled = t.get("enabled", True) is not False
+            argv = cybercensus._task_argv(t)
+            if not enabled:
+                status = "已停用"
+            elif cybercensus._task_is_active(argv) and not t.get("authorized"):
+                status = "缺 authorized，不会执行"
+            elif st.get("last_rc") not in (None, 0):
+                status = "上轮失败 rc=%s" % st.get("last_rc")
+            else:
+                status = "正常"
+            self.tree_cruise.insert("", "end", values=(
+                name, str(t.get("every") or "24h"),
+                time.strftime("%Y-%m-%d %H:%M", time.localtime(last)) if last else "从未",
+                nxt, status))
+        self.lbl_cruise.configure(
+            text="共 %d 个任务；状态文件：%s.state.json" % (len(tasks), p),
+            text_color=GRAY)
+
+    def _cruise_add_current(self):
+        target = self.ent_target.get().strip()
+        if not target:
+            messagebox.showwarning("缺少目标", "请先在目标框输入名称/域名/IP。")
+            return
+        from tkinter import simpledialog
+        name = simpledialog.askstring(
+            "加入定时巡航", "任务名称（显示用）：", parent=self,
+            initialvalue=target[:24])
+        if not name:
+            return
+        every = simpledialog.askstring(
+            "加入定时巡航", "周期：30m / 6h / 1d / 7d", parent=self,
+            initialvalue="24h")
+        if not every:
+            return
+        mode = self._mode
+        active = (mode == "active")
+        if active and not messagebox.askyesno(
+                "授权确认", "该任务包含主动扫描，确认你已获得书面授权？"):
+            return
+        argv = []
+        for tok in re.split(r"[\s,;]+", target):
+            if not tok:
+                continue
+            kind = cybercensus.classify_target(tok)
+            if kind == "ip" or kind == "cidr":
+                argv += ["--ip", tok]
+            elif kind == "domain":
+                argv += ["-d", tok]
+            else:
+                argv += ["-n", tok]
+        safe = re.sub(r'[\\/:*?"<>|]+', "_", name).strip("._") or "task"
+        outdir = os.path.join(self.var_out.get().strip() or "cybercensus_out", safe)
+        argv += ["--out", outdir, "--formats", "html,md,csv,json"]
+        if mode == "passive":
+            argv.append("--no-probe")
+        elif mode == "verify":
+            argv.append("--verify")
+        elif mode == "active":
+            argv += ["--active", "--top", "100"]
+        keep = _to_int(self.var_keep.get(), 0)
+        if keep > 0:
+            argv += ["--keep", str(keep)]
+        if self.var_scope_file.get().strip():
+            argv += ["--scope-file", self.var_scope_file.get().strip()]
+        if self.var_only_scope.get():
+            argv.append("--only-scope")
+        if self.var_webhook.get().strip():
+            argv += ["--webhook", self.var_webhook.get().strip()]
+        p = self._cruise_path()
+        try:
+            if os.path.isfile(p):
+                with open(p, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            else:
+                data = {}
+            if not isinstance(data, dict):
+                data = {"tasks": data}
+            data.setdefault("tasks", []).append({
+                "name": name, "argv": argv, "every": every.strip(),
+                "enabled": True, "authorized": bool(active),
+            })
+            os.makedirs(os.path.dirname(p) or ".", exist_ok=True)
+            with open(p, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=1)
+        except Exception as e:
+            messagebox.showerror("保存失败", str(e))
+            return
+        self._cruise_reload()
+        self.tabview.set("定时巡航")
+        self._append_log("已加入定时巡航：%s（%s）" % (name, every), "+")
+
+    def _cruise_cmd(self, once=False):
+        p = self._cruise_path()
+        args = ["--tasks", p] + (["--tasks-once"] if once else [])
+        if getattr(sys, "frozen", False):
+            return [sys.executable] + args
+        return [sys.executable, os.path.abspath(__file__)] + args
+
+    def _cruise_spawn(self, once=False):
+        p = self._cruise_path()
+        if not os.path.isfile(p):
+            messagebox.showwarning("缺少任务文件", "请先选择或生成 tasks.json")
+            return None
+        try:
+            kw = dict(stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if os.name == "nt":
+                kw["creationflags"] = 0x08000000
+            proc = subprocess.Popen(self._cruise_cmd(once), **kw)
+            return proc
+        except Exception as e:
+            messagebox.showerror("启动失败", str(e))
+            return None
+
+    def _cruise_start(self):
+        if self._cruise_proc and self._cruise_proc.poll() is None:
+            return
+        proc = self._cruise_spawn(once=False)
+        if not proc:
+            return
+        self._cruise_proc = proc
+        self.btn_cruise_start.configure(state="disabled")
+        self.btn_cruise_stop.configure(state="normal")
+        self.lbl_cruise.configure(
+            text="后台巡航运行中（PID %s），日志：cybercensus_cruise.log"
+                 % proc.pid, text_color=GREEN)
+        self._cruise_reload()
+
+    def _cruise_stop(self):
+        if self._cruise_proc and self._cruise_proc.poll() is None:
+            try:
+                self._cruise_proc.terminate()
+            except Exception:
+                pass
+        self._cruise_proc = None
+        self.btn_cruise_start.configure(state="normal")
+        self.btn_cruise_stop.configure(state="disabled")
+        self.lbl_cruise.configure(text="后台巡航已停止", text_color=GRAY)
+
+    def _cruise_once(self):
+        proc = self._cruise_spawn(once=True)
+        if proc:
+            self.lbl_cruise.configure(
+                text="正在执行本轮到期任务（PID %s）…" % proc.pid,
+                text_color=ACCENT)
+
+    def _cruise_poll(self):
+        if self._cruise_proc and self._cruise_proc.poll() is not None:
+            rc = self._cruise_proc.poll()
+            self._cruise_proc = None
+            self.btn_cruise_start.configure(state="normal")
+            self.btn_cruise_stop.configure(state="disabled")
+            self.lbl_cruise.configure(
+                text="后台巡航已退出（rc=%s）" % rc, text_color=GRAY)
+            self._cruise_reload()
+        self.after(3000, self._cruise_poll)
 
     # ---- 表格样式 ----
     def _style_treeview(self):
@@ -2168,6 +2412,12 @@ class App(ctk.CTk):
             if not messagebox.askyesno(APP_TITLE, "测绘仍在运行，确定退出吗？"):
                 return
         cybercensus.LOG_HOOK = None
+        if getattr(self, "_cruise_proc", None):
+            try:
+                if self._cruise_proc.poll() is None:
+                    self._cruise_proc.terminate()
+            except Exception:
+                pass
         self._stop_flag.set()
         if self._auto_timer:
             try:
@@ -2177,8 +2427,26 @@ class App(ctk.CTk):
         self.destroy()
 
 
+def _run_cli_tasks(argv):
+    """exe / pyw 的 CLI 模式：后台定时巡航（无窗口，输出写日志）。"""
+    log_path = os.path.join(BASE_DIR, "cybercensus_cruise.log")
+    log = open(log_path, "a", encoding="utf-8", buffering=1)
+    sys.stdout = log
+    sys.stderr = log
+    sys.argv = ["cybercensus.py"] + list(argv)
+    try:
+        return cybercensus.main()
+    finally:
+        try:
+            log.flush()
+        except Exception:
+            pass
+
+
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] in ("--tasks", "--tasks-once", "--tasks-status"):
+        return _run_cli_tasks(argv)
     if "--smoke" in argv:
         # 自检：构建界面后立即销毁（验证控件/布局无异常）
         app = App()
