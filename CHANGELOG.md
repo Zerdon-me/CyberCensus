@@ -2,6 +2,12 @@
 
 本项目遵循语义化版本（`主版本.次版本.修订号`）。
 
+## [0.13.3] - 2026-11-26
+
+### 修复
+
+- CI 下载 ProjectDiscovery 引擎时带上 `GITHUB_TOKEN`，避免 Runner 共享 IP 触发 GitHub API 速率限制（403）导致 Linux/Windows 包构建失败
+
 ## [0.13.2] - 2026-11-26
 
 ### 修复

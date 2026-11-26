@@ -8,7 +8,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D4.svg)](#)
-[![Version](https://img.shields.io/badge/version-0.13.2-22d3ee.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.13.3-22d3ee.svg)](CHANGELOG.md)
 
 <p align="center"><img src="docs/social-preview.png" alt="CyberCensus - Find every exposed asset. Prove every attribution." width="900"></p>
 
