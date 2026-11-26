@@ -34,7 +34,7 @@ TOOL_NAMES = ("subfinder", "httpx", "nuclei")
 
 TOP_FILES = ("cybercensus.py", "providers.py", "tool_updater.py",
              "port_presets.py", "requirements-cli.txt", "README.md", "README.en.md",
-             "LICENSE", "NOTICE", "COMMERCIAL.md", "SECURITY.md",
+             "LICENSE", "NOTICE", "TERMS.md", "COMMERCIAL.md", "SECURITY.md",
              "CHANGELOG.md")
 
 WRAPPER = """#!/usr/bin/env bash
