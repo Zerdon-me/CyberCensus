@@ -40,6 +40,7 @@ DIST = os.path.join(ROOT, "dist")
 STAGE = os.path.join(DIST, "_pkg_stage_%d" % os.getpid())
 PKG = os.path.join(STAGE, "CyberCensus-win64")
 TOOLS = os.path.join(PKG, "tools")
+SUMS_NAME = "SHA256SUMS.txt"
 
 TOOL_NAMES = ("subfinder", "httpx", "wafw00f", "nuclei")
 
@@ -128,7 +129,7 @@ def _write_checksums():
         with open(os.path.join(PKG, "SHA256SUMS.txt"), "w",
                   encoding="utf-8") as f:
             f.write(text)
-        with open(os.path.join(DIST, "SHA256SUMS.txt"), "w",
+        with open(os.path.join(DIST, SUMS_NAME), "w",
                   encoding="utf-8") as f:
             f.write(text)
 
@@ -148,12 +149,21 @@ def _write_readme():
 
 
 def main():
+    global PKG, TOOLS, SUMS_NAME
     ap = argparse.ArgumentParser()
     ap.add_argument("--skip-exe", action="store_true", help="复用现有 dist/CyberCensus.exe")
     ap.add_argument("--no-templates", action="store_true", help="不打包 nuclei 模板")
     ap.add_argument("--templates", default=os.path.join(
         os.path.expanduser("~"), "nuclei-templates"), help="nuclei 模板目录")
+    ap.add_argument("--pkg-name", default="CyberCensus-win64",
+                    help="发布目录/压缩包名称（如 CyberCensus-win32）")
+    ap.add_argument("--sums-name", default="SHA256SUMS.txt",
+                    help="校验和文件名（如 SHA256SUMS-win32.txt）")
     args = ap.parse_args()
+
+    PKG = os.path.join(STAGE, args.pkg_name)
+    TOOLS = os.path.join(PKG, "tools")
+    SUMS_NAME = args.sums_name
 
     exe = os.path.join(DIST, "CyberCensus.exe")
     if not args.skip_exe:
@@ -180,13 +190,13 @@ def main():
     _write_readme()
 
     print("== 压缩 ==")
-    zip_base = os.path.join(DIST, "CyberCensus-win64")
+    zip_base = os.path.join(DIST, args.pkg_name)
     zip_path = zip_base + ".zip"
     if os.path.isfile(zip_path):
         os.remove(zip_path)
     for attempt in range(5):
         try:
-            shutil.make_archive(zip_base, "zip", STAGE, "CyberCensus-win64")
+            shutil.make_archive(zip_base, "zip", STAGE, args.pkg_name)
             break
         except PermissionError:
             if attempt == 4:

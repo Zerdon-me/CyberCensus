@@ -2,6 +2,18 @@
 
 本项目遵循语义化版本（`主版本.次版本.修订号`）。
 
+## [0.13.1] - 2026-11-26
+
+### 发行包
+
+- 新增 **Windows 32 位（x86）发行包** `CyberCensus-win32.zip`：
+  - 32 位 Python + PyInstaller 构建的 `CyberCensus.exe`
+  - 32 位 wafw00f
+  - subfinder / httpx / nuclei 使用官方 `windows_386` 构建
+  - 适合 Windows 8.1 / 10 / 11 的 32 位系统
+- `packaging/pack_release.py` 支持 `--pkg-name` / `--sums-name`，可并行产出 win32 / win64 包
+- README 增加“如何确认 32/64 位系统”和选择哪个包的说明
+
 ## [0.13.0] - 2026-11-26
 
 ### 合规与界面

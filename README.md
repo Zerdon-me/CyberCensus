@@ -8,7 +8,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D4.svg)](#)
-[![Version](https://img.shields.io/badge/version-0.13.0-22d3ee.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.13.1-22d3ee.svg)](CHANGELOG.md)
 
 <p align="center"><img src="docs/social-preview.png" alt="CyberCensus - Find every exposed asset. Prove every attribution." width="900"></p>
 
@@ -38,7 +38,7 @@
 
 **Windows：**
 
-1. 到本仓库的 **Releases** 页面，下载 **`CyberCensus-win64.zip`**（约 138MB）
+1. 到本仓库的 **Releases** 页面，下载 **`CyberCensus-win64.zip`**（64 位，约 138MB）
 2. 解压到任意目录，**双击 `CyberCensus.exe`** 打开软件窗口
 3. 在目标框输入单位名称（如"某某市人民医院"），点 **▶ 开始测绘**；跑完看三张结果卡片，点 **查看报告**——报告开头就有"怎么读这份报告"，每条资产都写明白了"为什么算它的"
 
@@ -57,6 +57,13 @@
 
 > 也可以只下载 **`CyberCensus.exe`**（约 37MB）：主程序照常运行，只是 subfinder/httpx/wafw00f/nuclei 这四项增强会自动跳过（日志会写"未检测到…"），不影响被动采集、证据分级和报告。
 > ⚠️ SmartScreen 可能提示"未知发布者"（未购买代码签名证书的通病），点"仍要运行"即可。
+
+**32 位 Windows（x86）：**
+
+- 下载 **`CyberCensus-win32.zip`**（32 位 exe + 32 位增强引擎）
+- 查看系统类型：设置 → 系统 → 关于 → “系统类型”；显示“32 位操作系统”就用 win32 包
+- 适用范围：Windows 8.1 / 10 / 11 的 32 位版本；Windows 7 及更早系统不受 Python 3.11 支持，无法运行官方包
+- 64 位系统请优先用 `CyberCensus-win64.zip`，不要混用两个包里的 exe
 
 **Linux（x86_64，命令行）：**
 

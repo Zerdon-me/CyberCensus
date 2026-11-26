@@ -81,6 +81,77 @@ jobs:
             dist/SHA256SUMS.txt
           generate_release_notes: true
 
+  win32:
+    needs: build
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          architecture: 'x86'
+
+      - name: Install dependencies (32-bit)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install customtkinter dnspython cryptography pypinyin pyinstaller wafw00f
+
+      - name: Build single-file EXE (32-bit)
+        run: |
+          python -m PyInstaller --noconfirm --onefile --windowed --name CyberCensus --icon docs/logo.ico --add-data "docs/logo.png;docs" --collect-all customtkinter --collect-all pypinyin asm_gui.pyw
+
+      - name: Build standalone wafw00f (32-bit)
+        run: |
+          python -m PyInstaller --noconfirm --onefile --name wafw00f --collect-all wafw00f packaging/wafw00f_entry.py
+
+      - name: Download enhanced engines (windows 386)
+        shell: pwsh
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          $headers = @{ 'User-Agent' = 'CyberCensus-build' }
+          foreach ($repo in 'subfinder', 'httpx', 'nuclei') {
+            $r = Invoke-RestMethod "https://api.github.com/repos/projectdiscovery/$repo/releases/latest" -Headers $headers
+            $asset = $r.assets | Where-Object { $_.name -match 'windows_386\.zip$' } | Select-Object -First 1
+            if (-not $asset) { throw "No windows_386 asset for $repo" }
+            $zip = "$env:RUNNER_TEMP\$repo-386.zip"
+            Invoke-WebRequest $asset.browser_download_url -OutFile $zip
+            Expand-Archive $zip -DestinationPath "$env:RUNNER_TEMP\$repo-386" -Force
+            $exe = Get-ChildItem "$env:RUNNER_TEMP\$repo-386" -Recurse -Filter "$repo.exe" | Select-Object -First 1
+            Copy-Item $exe.FullName "dist/$repo.exe"
+          }
+
+      - name: Download nuclei templates
+        shell: pwsh
+        run: |
+          $tpl = Join-Path $env:GITHUB_WORKSPACE "nuclei-templates"
+          $zip = Join-Path $env:RUNNER_TEMP "nuclei-templates.zip"
+          $tmp = Join-Path $env:RUNNER_TEMP "nuclei-templates-src"
+          Invoke-WebRequest "https://codeload.github.com/projectdiscovery/nuclei-templates/zip/refs/heads/main" -OutFile $zip
+          if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
+          Expand-Archive $zip -DestinationPath $tmp -Force
+          $src = Get-ChildItem $tmp -Directory | Select-Object -First 1
+          if (Test-Path $tpl) { Remove-Item $tpl -Recurse -Force }
+          Move-Item $src.FullName $tpl
+          $yaml = Get-ChildItem $tpl -Recurse -Filter *.yaml -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $yaml) { throw "nuclei templates were not downloaded to $tpl" }
+
+      - name: Assemble 32-bit portable package
+        shell: pwsh
+        run: |
+          $tpl = Join-Path $env:GITHUB_WORKSPACE "nuclei-templates"
+          python packaging/pack_release.py --skip-exe --pkg-name CyberCensus-win32 --sums-name SHA256SUMS-win32.txt --templates $tpl
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/CyberCensus-win32.zip
+            dist/SHA256SUMS-win32.txt
+
   linux:
     needs: build
     runs-on: ubuntu-latest
