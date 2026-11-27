@@ -50,14 +50,20 @@ class TestExpandRelated(unittest.TestCase):
 
         fake = {"www.example.com", "api.example.com",
                 "brand-new-domain.cn", "sub.brand-new-domain.cn"}
-        with mock.patch.object(c, "crt_by_org", return_value=fake):
+        import pivots
+
+        def fake_verify(name, dom):
+            return dom.endswith("brand-new-domain.cn")
+
+        with mock.patch.object(pivots, "crt_by_org", return_value=fake), \
+                mock.patch.object(e, "_verify_candidate_domain",
+                                  side_effect=fake_verify):
             e.expand_related_assets()
 
         hosts = {a.host for a in e.assets.values()}
         self.assertIn("www.example.com", hosts)          # 已知锚点域子域
         self.assertIn("api.example.com", hosts)
-        self.assertIn("brand-new-domain.cn", hosts)      # 新根域入资产
-        self.assertIn("brand-new-domain.cn", e.anchor["weak_domains"])
+        self.assertIn("brand-new-domain.cn", hosts)      # 新根域（验证通过后入资产）
 
     def test_skips_names_already_searched(self):
         e = make_engine()
@@ -66,17 +72,17 @@ class TestExpandRelated(unittest.TestCase):
         e.anchor["orgs"] = {"某公司"}
         e.anchor["domains"] = set()
         e.domains = set()
-        with mock.patch.object(c, "crt_by_org") as m:
+        import pivots
+        with mock.patch.object(pivots, "crt_by_org") as m:
             e.expand_related_assets()
             m.assert_not_called()
 
-    def test_empty_orgs_noop(self):
-        e = make_engine()
-        e.names = []
-        e.anchor["orgs"] = set()
-        with mock.patch.object(c, "crt_by_org") as m:
-            e.expand_related_assets()
-            m.assert_not_called()
+    def test_registry_contains_builtin_pivots(self):
+        import pivots
+        names = pivots.PIVOT_REGISTRY.names()
+        self.assertIn("cert-org", names)
+        self.assertIn("passive-dns", names)
+        self.assertIn("cloud-affinity", names)
 
 
 if __name__ == "__main__":

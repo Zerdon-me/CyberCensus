@@ -54,7 +54,7 @@ except Exception:          # 单文件运行/裁剪包时退化为内置小表
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
-__version__ = "0.15.0"
+__version__ = "0.16.0"
 
 # ----------------------------------------------------------------------------
 # 可选依赖
@@ -5502,58 +5502,154 @@ class Engine(object):
                 except Exception:
                     pass
 
-    def expand_related_assets(self, max_orgs=4, limit=200):
-        """关联资产扩展：用锚点的证书 O= / 组织名做精确反查。
+    def expand_related_assets(self, max_orgs=4, limit=200, only=None):
+        """关联资产扩展（可插拔关联源，见 pivots.py）。
 
-        解决「域名不以公司名命名、也不备案」的场景——同一证书 O= 下的一批
-        分散域名（如集团旗下用独立品牌、独立域名、云托管的业务），
-        crt.sh 精确组织名反查能直接带出来。候选来自 anchor["orgs"] 里
-        比用户输入主体名更精确的条目（证书 O= 精确值 / RDAP 注册人 / IP 归属组织），
-        避免与 collect_passive 里已经用主体名做过的反查重复。
+        解决「域名不以公司名命名、也不备案」的场景。每个 PivotSource 产出候选，
+        统一走 _verify_candidate_domain / 弱锚点规则把关联：证书 O= 精确反查、
+        注册人反查、同云邻居、PassiveDNS 强化、应用汇 APP 等都接在同一注册表上，
+        第三方用 PIVOT_REGISTRY.register() 即可加自己的源。
         """
-        names_lower = {n.strip().lower() for n in self.names if n and n.strip()}
-        orgs = [o for o in sorted(set(self.anchor["orgs"]))
-                if o and len(o) >= 4 and o.strip().lower() not in names_lower]
-        if not orgs:
-            return
+        try:
+            from pivots import PIVOT_REGISTRY
+        except Exception:
+            PIVOT_REGISTRY = None
         known = set(self.anchor["domains"])
-        done = 0
-        for org in orgs:
-            if done >= max_orgs:
-                break
-            done += 1
+        added = 0
+        if PIVOT_REGISTRY is not None:
+            for src in PIVOT_REGISTRY.enabled(only):
+                if added >= limit:
+                    break
+                try:
+                    cands = src.discover(self) or []
+                except Exception as e:
+                    log("关联源 %s 异常: %s" % (src.name, str(e)[:80]), "!")
+                    continue
+                if not cands:
+                    continue
+                log("关联源(%s/%s): %d 个候选" % (src.name, src.label, len(cands)))
+                cnt = 0
+                for label, cand in cands[:max(1, limit - added)]:
+                    h = str(cand).strip().lower().rstrip(".")
+                    if isinstance(cand, tuple):
+                        h = str(cand[0]).strip().lower()
+                    if not h or "." not in h or h in self.domains and not h:
+                        continue
+                    if re.match(r"^\d+\.\d+\.\d+\.\d+$", h):
+                        continue        # 邻居候选只收域名
+                    root = self._guess_root(h)
+                    if root and root in known:
+                        self.add_asset(h, None, None, source="pivot:" + label)
+                        cnt += 1
+                    elif (root and root not in self.domains
+                          and root not in SEARCH_JUNK_ROOTS
+                          and root not in MAIL_INFRA_ROOTS):
+                        try:
+                            name = ((self.names or sorted(self.anchor["orgs"])
+                                     or [""])[0])
+                            if self._verify_candidate_domain(name, root):
+                                self.add_asset(h, None, None,
+                                               source="pivot:" + label)
+                                cnt += 1
+                                log("  关联候选验证通过(%s): %s" % (label, root), "+")
+                        except Exception:
+                            pass
+                if cnt:
+                    log("  %s 新增 %d 个资产" % (src.label, cnt), "+")
+                added += cnt
+        if added:
+            log("关联扩展共新增 %d 个资产" % added, "+")
+
+    # ---- 多源 APP 发现（适配器化；来源见 _APP_SOURCES） ----
+    _APP_SOURCES = (
+        "itunes", "appchina", "qimai(optional)", "xiaohongshu(optional)",
+        "xiaolanben(optional)",
+    )
+
+    def discover_apps(self):
+        """移动端 APP 发现（多源适配器）。
+
+        - itunes：Apple App Store 公开 API（免费无 Key，默认启用）
+        - appchina：应用汇公开搜索页（HTML best-effort，反爬时静默跳过）
+        - qimai / xiaohongshu / xiaolanben：需账号/接口，CyberCensus 不内置凭据，
+          标注为可选；用户实现对应适配器并注册到 APP_REGISTRY 即可启用
+        归属过滤三通道统一：应用名含单位名 / 开发者匹配锚点组织 /
+        中文名↔英文开发者（地域拼音+行业英文词）。
+        """
+        if not self.names:
+            return
+        names = (set(self.names) | set(self.anchor.get("orgs") or ())
+                 | set(self.intel.get("aliases") or ()))
+        seen = set()
+
+        def _owns(track, seller):
+            """归属三通道，命中返回依据文案，否则 ""。"""
+            if any(n and (_org_match(n, track)
+                          or _org_match_fuzzy(n, track, min_cov=0.8))
+                   for n in self.names):
+                return "应用名含单位名"
+            if any(n and _org_match(n, seller) for n in names):
+                return "开发者匹配锚点组织"
+            if any(_seller_match(n, seller) for n in self.names):
+                return "开发者含地域+行业词"
+            return ""
+
+        def _emit(track, seller, bundle, reason):
+            if not track or track in seen:
+                return
+            seen.add(track)
+            self.apps.append((track, seller, bundle or "", reason))
+            log("  APP: %s | 开发者: %s | %s" % (track, seller, reason), "+")
+
+        # --- 源 1：App Store（默认启用） ---
+        for name in self.names:
+            for app in itunes_search_apps(name):
+                reason = _owns(app.get("trackName") or "",
+                               app.get("sellerName") or "")
+                if not reason:
+                    continue
+                _emit(app.get("trackName") or "",
+                      app.get("sellerName") or "",
+                      app.get("bundleId") or "", reason)
+                # 开发者主页域名作为候选资产（互证后入锚点）
+                su = app.get("sellerUrl") or ""
+                m = re.match(r"https?://([^/:?#]+)", su)
+                if m:
+                    self._ref_candidates.append(m.group(1))
+
+        # --- 源 2：应用汇公开页（best-effort） ---
+        for name in self.names[:2]:
             try:
-                found = crt_by_org(org)
+                url = ("http://www.appchina.com/search/?keyword="
+                       + urllib.parse.quote(name))
+                html = http_get(url, timeout=12, retries=1)
             except Exception:
                 continue
-            if not found:
-                continue
-            log("证书O=精确反查(%s): %d 个域名" % (org[:40], len(found)))
-            cnt = 0
-            for h in sorted(found):
-                h = str(h).strip().lower().rstrip(".")
-                if not h or "." not in h or cnt >= limit:
-                    if cnt >= limit:
-                        break
+            for m in re.finditer(
+                    r'<a[^>]+href="[^"]*/app/([a-z0-9_.]+)"[^>]*>([^<]{2,40})</a>',
+                    html):
+                pkg, title = m.group(1), (m.group(2) or "").strip()
+                if not pkg or not title:
                     continue
-                root = self._guess_root(h)
-                if root and root in known:
-                    # 已知锚点域下的子域 → 直接入资产
-                    self.add_asset(h, None, None, source="crt:org-deep")
-                    cnt += 1
-                elif (root and root not in self.domains
-                      and root not in SEARCH_JUNK_ROOTS
-                      and root not in MAIL_INFRA_ROOTS):
-                    # 新根域 → 弱锚点（同证书主体，但可能是第三方/子公司）
-                    self.domains.add(root)
-                    self.anchor["weak_domains"].add(root)
-                    self.add_asset(h, None, None, source="crt:org-deep")
-                    cnt += 1
-                elif root and root in self.domains:
-                    self.add_asset(h, None, None, source="crt:org-deep")
-                    cnt += 1
-            if cnt:
-                log("  证书O=反查新增 %d 个资产" % cnt, "+")
+                reason = _owns(title, pkg.split(".")[0])
+                if reason:
+                    _emit(title, "应用汇/" + pkg.split(".")[0], pkg, reason)
+
+        # --- 可选源（需凭据，未内置）：预留注册点 ---
+        try:
+            from pivots import APP_REGISTRY
+            for src in APP_REGISTRY.enabled():
+                try:
+                    for track, seller, bundle, reason in src.search(self.names):
+                        if _owns(track, seller):
+                            _emit(track, seller, bundle, reason + "（%s）" % src.label)
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        if self.apps:
+            log("移动端 APP 发现: %d 个（清单见报告）" % len(self.apps), "+")
 
     def collect_risk_hints(self, max_domains=3):
         """对主体域名做搜索引擎 dork 情报收集（文档第9步：谷歌语法 + GitHub）。

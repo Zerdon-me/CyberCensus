@@ -451,11 +451,11 @@ class App(ctk.CTk):
         self.lbl_status.configure(text_color=color)
 
     # ------------------------------------------------------------------
-    # 侧边栏（卡片化）
+    # 侧边栏（紧凑分区：分区徽标 + 无框卡片，降低视觉噪音）
     # ------------------------------------------------------------------
     def _section(self, parent, text):
         ctk.CTkLabel(parent, text=text, font=self.f_mono_sm, text_color=GRAY,
-                     anchor="w").pack(fill="x", padx=18, pady=(10, 4))
+                     anchor="w").pack(fill="x", padx=18, pady=(14, 6))
 
     def _build_sidebar(self):
         sb = ctk.CTkFrame(self, width=268, corner_radius=0, fg_color=PANEL)
@@ -1498,7 +1498,7 @@ class App(ctk.CTk):
         except Exception:
             pass
         style.configure("Treeview", background=bg, foreground=fg, fieldbackground=bg,
-                        rowheight=30, borderwidth=0, font=("", 12))
+                        rowheight=28, borderwidth=0, font=("", 12))
         style.configure("Treeview.Heading", background=head, foreground=fg,
                         relief="flat", font=("", 12, "bold"))
         style.map("Treeview", background=[("selected", sel)],
@@ -2153,7 +2153,7 @@ class App(ctk.CTk):
     def _open_about(self):
         win = ctk.CTkToplevel(self)
         win.title("关于 CyberCensus")
-        win.geometry("520x360")
+        win.geometry("560x460")
         win.configure(fg_color=BG)
         win.transient(self)
         win.after(250, lambda: win.grab_set())
@@ -2169,8 +2169,22 @@ class App(ctk.CTk):
                 "项目：https://github.com/Zerdon-me/CyberCensus",
                 "条款：TERMS.md（使用条款与免责声明）"):
             ctk.CTkLabel(win, text=line, font=self.f_mono_sm,
-                         text_color=GRAY, wraplength=470, justify="left",
+                         text_color=GRAY, wraplength=500, justify="left",
                          anchor="w").pack(fill="x", padx=24, pady=2)
+        # 关联源清单（内置 + 可选）
+        try:
+            from pivots import PIVOT_REGISTRY
+            rows = PIVOT_REGISTRY.describe()
+        except Exception:
+            rows = []
+        ctk.CTkLabel(win, text="关联源", font=self.f_body, text_color=TEXT,
+                     anchor="w").pack(fill="x", padx=24, pady=(10, 2))
+        for name, label, status in rows[:10]:
+            dot = "●" if status == "可用" else "○"
+            color = GREEN if status == "可用" else GRAY
+            ctk.CTkLabel(win, text="%s %s（%s）— %s" % (dot, label, name, status),
+                         font=self.f_mono_sm, text_color=color,
+                         anchor="w").pack(fill="x", padx=28, pady=1)
         row = ctk.CTkFrame(win, fg_color="transparent")
         row.pack(fill="x", padx=20, pady=(16, 12))
         ctk.CTkButton(row, text="打开 TERMS", width=110,

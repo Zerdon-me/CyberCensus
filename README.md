@@ -8,7 +8,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D4.svg)](#)
-[![Version](https://img.shields.io/badge/version-0.15.0-22d3ee.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.16.0-22d3ee.svg)](CHANGELOG.md)
 
 <p align="center"><img src="docs/social-preview.png" alt="CyberCensus - Find every exposed asset. Prove every attribution." width="900"></p>
 
@@ -192,6 +192,7 @@ pyinstaller --onefile --windowed --collect-all customtkinter --collect-all pypin
 | 平台关键词检索 | title/body 精确搜短名（如"双流移动"），结果仅 C 级疑似 | `--provider-keyword`（默认关，耗配额） |
 | 平台图标/统计查询 | `icon_hash=`（favicon）、`body=`（GA/GTM/Meta 统计 ID），有 Key 时找同主体站点 | 自动（检测到锚点 favicon/统计 ID） |
 | 被动归属扩展 | 统计/像素 ID、Google/Bing/Facebook 验证令牌、证书 SAN 兄弟域、MX/SPF 域名反查 | 标准/复核模式自动；纯被动跳过 |
+| 关联源插件化 | 证书 O= 精确反查 / 注册人反查 / 同云邻居 / PassiveDNS / 应用汇 APP；`pivots.py` 可插拔，第三方 `PIVOT_REGISTRY.register()` 接入 | 标准模式自动；「关于」窗口查看源清单 |
 | 持续监控 | 每 N 分钟重扫 + 基线对比 + Webhook 告警 | `--watch MIN`；界面「高级参数 → 持续监控」 |
 | 定时巡航 | 多目标任务按 `30m / 6h / 1d / 7d` 周期自动巡检，支持单次模式接 cron | `--tasks tasks.json`（见「定时巡航」） |
 | 范围过滤 | 按用户提供的 URL/域名/IP 清单，把资产标为 范围内/相似/无关，可只保留相关项 | `--scope` / `--scope-file` / `--only-scope`；界面「高级参数 → 资产范围文件」 |
