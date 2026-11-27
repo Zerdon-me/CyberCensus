@@ -8,7 +8,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D4.svg)](#)
-[![Version](https://img.shields.io/badge/version-0.13.3-22d3ee.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.14.0-22d3ee.svg)](CHANGELOG.md)
 
 <p align="center"><img src="docs/social-preview.png" alt="CyberCensus - Find every exposed asset. Prove every attribution." width="900"></p>
 
@@ -180,6 +180,8 @@ pyinstaller --onefile --windowed --collect-all customtkinter --collect-all pypin
 | APP 发现 | App Store 公开搜索 API，按名称/开发者归属过滤 | 开 | `--no-apps` 关闭；仅 iOS |
 | Wayback 路径 | 历史 URL 里的目录/接口路径 | 开 | `--no-paths` 关闭；极速模式跳过 |
 | 页面外链 / JS 引用 | 已探测页面里引用的域名，互证后入锚点 | 标准模式 | 纯被动模式不探测页面，故不产生 |
+| 证书 O= 精确反查 | 用锚点证书 O= / RDAP 注册人 / IP 归属组织做 crt.sh 精确反查，带出同证书主体的分散域名 | 标准模式 | 关联扩展闭环自动触发 |
+| 云资产识别 | 按云厂商 ASN / org 关键字标记云厂商（阿里云/腾讯云/AWS/...），解决不备案、不命名的云托管资产 | 自动 | 纯本地查表，CSV/MD/HTML/GUI 均展示「云」维度 |
 
 ### 3. 多平台聚合（可选，配 Key 后更全）
 
@@ -192,6 +194,7 @@ pyinstaller --onefile --windowed --collect-all customtkinter --collect-all pypin
 | 持续监控 | 每 N 分钟重扫 + 基线对比 + Webhook 告警 | `--watch MIN`；界面「高级参数 → 持续监控」 |
 | 定时巡航 | 多目标任务按 `30m / 6h / 1d / 7d` 周期自动巡检，支持单次模式接 cron | `--tasks tasks.json`（见「定时巡航」） |
 | 范围过滤 | 按用户提供的 URL/域名/IP 清单，把资产标为 范围内/相似/无关，可只保留相关项 | `--scope` / `--scope-file` / `--only-scope`；界面「高级参数 → 资产范围文件」 |
+| 云资产筛选 | 按云厂商维度查看/筛选（阿里云/腾讯云/AWS/...），识别云托管与 CDN 资产 | 自动；报告「云资产分布」+ GUI/CSV「云」列 |
 | 资产关系图谱 | 主机→IP→ASN、证书 O=、RDAP、统计 ID、验证令牌的关系链 | 自动（JSON `asset_graph` + HTML 交互图） |
 
 ### 4. 主动探测（需书面授权）

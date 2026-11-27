@@ -54,7 +54,7 @@ except Exception:          # 单文件运行/裁剪包时退化为内置小表
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
-__version__ = "0.13.3"
+__version__ = "0.14.0"
 
 # ----------------------------------------------------------------------------
 # 可选依赖
@@ -1981,6 +1981,62 @@ def asn_info(ip, timeout=8):
 
 
 # ----------------------------------------------------------------------------
+# 云资产识别：很多单位（尤其大集团/互联网公司）把业务托管在云上，
+# 域名不备案、也不以公司名命名，但 IP 归属、ASN 或 org 名会暴露云厂商。
+# 把「云厂商」作为独立维度，既能做归属筛选，也能反查同云/同主体的关联资产。
+# ----------------------------------------------------------------------------
+# 主流云厂商 ASN（公开数据，精确匹配优先）
+CLOUD_ASN = {
+    "37963": "阿里云", "45102": "阿里云", "134963": "阿里云",
+    "45090": "腾讯云", "132203": "腾讯云", "139341": "腾讯云",
+    "55990": "华为云", "136907": "华为云",
+    "38365": "百度云", "55967": "百度云",
+    "8075": "微软 Azure", "12076": "微软 Azure",
+    "16509": "AWS", "14618": "AWS", "8987": "AWS",
+    "15169": "Google Cloud", "396982": "Google Cloud",
+    "13335": "Cloudflare", "209242": "Cloudflare",
+    "59019": "金山云", "58879": "UCloud", "58519": "UCloud",
+    "4808": "美团云", "24429": "阿里云(国内)",
+}
+# org 名称关键字（ip-api / Team Cymru / RDAP 返回的 AS 注册名，兜底匹配）
+CLOUD_ORG_KEYWORDS = (
+    ("alibaba", "阿里云"), ("aliyun", "阿里云"), ("taobao", "阿里系"),
+    ("tencent", "腾讯云"), ("qcloud", "腾讯云"),
+    ("huawei", "华为云"), ("huaweicloud", "华为云"),
+    ("baidu", "百度云"),
+    ("amazon", "AWS"), ("aws", "AWS"), ("amazon technologies", "AWS"),
+    ("microsoft", "微软 Azure"), ("azure", "微软 Azure"),
+    ("google", "Google Cloud"), ("gcp", "Google Cloud"),
+    ("cloudflare", "Cloudflare"),
+    ("kingsoft", "金山云"), ("ucloud", "UCloud"),
+    ("chinanetcenter", "网宿CDN"), ("wangsu", "网宿CDN"),
+    ("fastly", "Fastly CDN"), ("akamai", "Akamai CDN"),
+    ("qiniu", "七牛云"), ("aliyuncs", "阿里云OSS"),
+)
+
+
+def detect_cloud(asn="", org="", cname=""):
+    """根据 ASN / AS 注册名 / CNAME 判断云厂商，返回中文名或 ""（非云）。
+
+    纯本地查表，不发网络请求；evaluate 阶段对每个资产做一次即可。
+    """
+    a = str(asn or "").strip().lstrip("AS").lower()
+    if a in CLOUD_ASN:
+        return CLOUD_ASN[a]
+    o = str(org or "").lower()
+    if o:
+        for kw, name in CLOUD_ORG_KEYWORDS:
+            if kw in o:
+                return name
+    c = str(cname or "").lower()
+    for kw in (".cdn.", "cdn.", ".cloud.", ".waf.", "cloudflare", "fastly",
+               "akamai", "cloudfront", "azureedge", "gcore", "qiniucdn"):
+        if kw in c:
+            return "CDN/云加速"
+    return ""
+
+
+# ----------------------------------------------------------------------------
 # 官方注册号（LEI / VAT / DUNS / 公司注册号）：国际站点的"身份证"
 # ----------------------------------------------------------------------------
 def _lei_ok(lei):
@@ -3138,7 +3194,7 @@ class Asset(object):
                  "emails", "phones", "authorities", "refs",
                  "site_code", "police_beian", "rdap_org", "rdap_country",
                  "trackings", "registry_ids", "asn", "asn_org",
-                 "verify_tokens", "scope")
+                 "verify_tokens", "scope", "cloud")
 
     def __init__(self, host, port=None, scheme=None):
         self.host = host
@@ -3182,6 +3238,7 @@ class Asset(object):
         self.asn_org = ""         # AS 注册名称（与主体名吻合时作证据）
         self.verify_tokens = set()  # 页面/DNS 中的域名验证令牌
         self.scope = ""           # 范围过滤：范围内 / 相似 / 无关（未启用时为空）
+        self.cloud = ""           # 云资产厂商：阿里云/腾讯云/华为云/AWS/... 空=非云
 
     def key(self):
         p = self.port or (443 if self.scheme == "https" else 80 if self.scheme == "http" else "")
@@ -4825,6 +4882,16 @@ class Engine(object):
             nprov = len(a.providers)
             title = (a.title or "")
 
+            # 云资产识别：ASN / AS 注册名 / ip-api org 兜底（纯本地查表）
+            cld_asn = a.asn
+            cld_org = a.asn_org
+            if ip and ip in self.ip_notes:
+                note = self.ip_notes[ip]
+                cld_asn = cld_asn or note.get("asn") or note.get("as") or ""
+                cld_org = (cld_org or note.get("asn_name")
+                           or note.get("org") or note.get("isp") or "")
+            a.cloud = detect_cloud(cld_asn, cld_org)
+
             # ---------- 页面级证据（HTTP 探测得到）----------
             if a.beian and _beian_key(a.beian) in beian_keys:
                 ev.append("A|页面备案号一致:%s" % a.beian)
@@ -5435,6 +5502,59 @@ class Engine(object):
                 except Exception:
                     pass
 
+    def expand_related_assets(self, max_orgs=4, limit=200):
+        """关联资产扩展：用锚点的证书 O= / 组织名做精确反查。
+
+        解决「域名不以公司名命名、也不备案」的场景——同一证书 O= 下的一批
+        分散域名（如集团旗下用独立品牌、独立域名、云托管的业务），
+        crt.sh 精确组织名反查能直接带出来。候选来自 anchor["orgs"] 里
+        比用户输入主体名更精确的条目（证书 O= 精确值 / RDAP 注册人 / IP 归属组织），
+        避免与 collect_passive 里已经用主体名做过的反查重复。
+        """
+        names_lower = {n.strip().lower() for n in self.names if n and n.strip()}
+        orgs = [o for o in sorted(set(self.anchor["orgs"]))
+                if o and len(o) >= 4 and o.strip().lower() not in names_lower]
+        if not orgs:
+            return
+        known = set(self.anchor["domains"])
+        done = 0
+        for org in orgs:
+            if done >= max_orgs:
+                break
+            done += 1
+            try:
+                found = crt_by_org(org)
+            except Exception:
+                continue
+            if not found:
+                continue
+            log("证书O=精确反查(%s): %d 个域名" % (org[:40], len(found)))
+            cnt = 0
+            for h in sorted(found):
+                h = str(h).strip().lower().rstrip(".")
+                if not h or "." not in h or cnt >= limit:
+                    if cnt >= limit:
+                        break
+                    continue
+                root = self._guess_root(h)
+                if root and root in known:
+                    # 已知锚点域下的子域 → 直接入资产
+                    self.add_asset(h, None, None, source="crt:org-deep")
+                    cnt += 1
+                elif (root and root not in self.domains
+                      and root not in SEARCH_JUNK_ROOTS
+                      and root not in MAIL_INFRA_ROOTS):
+                    # 新根域 → 弱锚点（同证书主体，但可能是第三方/子公司）
+                    self.domains.add(root)
+                    self.anchor["weak_domains"].add(root)
+                    self.add_asset(h, None, None, source="crt:org-deep")
+                    cnt += 1
+                elif root and root in self.domains:
+                    self.add_asset(h, None, None, source="crt:org-deep")
+                    cnt += 1
+            if cnt:
+                log("  证书O=反查新增 %d 个资产" % cnt, "+")
+
     def collect_risk_hints(self, max_domains=3):
         """对主体域名做搜索引擎 dork 情报收集（文档第9步：谷歌语法 + GitHub）。
 
@@ -5963,7 +6083,8 @@ class Engine(object):
                 "prov_org", "source", "evidence", "reject_reason", "urls",
                 "plain", "findings", "emails", "phones", "authorities", "refs",
                 "site_code", "police_beian", "rdap_org", "rdap_country",
-                "trackings", "registry_ids", "asn", "asn_org", "verify_tokens"]
+                "trackings", "registry_ids", "asn", "asn_org", "verify_tokens",
+                "cloud"]
 
         def write_csv(path, items):
             with open(path, "w", newline="", encoding="utf-8-sig") as f:
@@ -5992,6 +6113,7 @@ class Engine(object):
                         ";".join(sorted(a.registry_ids)),
                         a.asn, a.asn_org,
                         ";".join(sorted(a.verify_tokens)),
+                        a.cloud,
                     ])
 
         # 输出格式选择（--formats / 界面开关）：md / csv / json；未指定=全出
@@ -6158,6 +6280,22 @@ class Engine(object):
                         "、".join(self.intel.get("queries") or []) or "—",
                         "、".join(self.intel.get("seed_domains") or []) or "—"))
         L.append("")
+
+        # 云资产统计（云厂商维度：阿里云/腾讯云/华为云/AWS/... 非云不列）
+        clouded = [a for a in rows if getattr(a, "cloud", "")]
+        if clouded:
+            cc = {}
+            for a in clouded:
+                cc[a.cloud] = cc.get(a.cloud, 0) + 1
+            L.append("## 云资产分布\n")
+            L.append("部署在云厂商/CDN 上的资产 %d 个（域名不备案、不以公司名命名时，"
+                     "云归属是重要线索）：" % len(clouded))
+            L.append("")
+            L.append("| 云厂商 | 数量 |")
+            L.append("|--------|------|")
+            for name, n in sorted(cc.items(), key=lambda kv: -kv[1]):
+                L.append("| %s | %d |" % (name, n))
+            L.append("")
 
         # 用户提供的资产范围清单（--scope / --scope-file）
         scoped = [a for a in rows if getattr(a, "scope", "")]
@@ -6402,19 +6540,20 @@ class Engine(object):
             if not items:
                 L.append("_无_\n")
                 return
-            head = ("| 主机 | IP | 端口 | 标题 | 服务器 | 平台 | 范围 | 归属说明（为什么算它的） | 证据 |")
-            sep = ("|------|----|------|------|--------|------|------|--------------------------|------|")
+            head = ("| 主机 | IP | 端口 | 标题 | 服务器 | 平台 | 范围 | 云 | 归属说明（为什么算它的） | 证据 |")
+            sep = ("|------|----|------|------|--------|------|------|----|--------------------------|------|")
             if show_reason:
                 head += " 剔除原因 |"
                 sep += "----------|"
             L.append(head)
             L.append(sep)
             for a in items:
-                line = "| %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
+                line = "| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
                     _md(a.host), _md(a.ip), _md(str(a.port or "")),
                     _md(a.title), _md(a.server),
                     _md(",".join(sorted(a.providers)) or "-"),
                     _md(getattr(a, "scope", "") or "-"),
+                    _md(getattr(a, "cloud", "") or "-"),
                     _md(plain_evidence(a.evidence)),
                     _md("; ".join(a.evidence)))
                 if show_reason:
@@ -6529,7 +6668,7 @@ class Engine(object):
             if not items:
                 return "<p class='muted'>无</p>"
             head = ("<tr><th>分类</th><th>主机</th><th>IP</th><th>端口</th>"
-                    "<th>标题</th><th>服务器</th><th>指纹</th><th>范围</th><th>敏感发现</th>"
+                    "<th>标题</th><th>服务器</th><th>指纹</th><th>范围</th><th>云</th><th>敏感发现</th>"
                     "<th>归属说明</th>" + ("<th>剔除原因</th>" if show_reason else "")
                     + "</tr>")
             body = []
@@ -6538,11 +6677,12 @@ class Engine(object):
                 cells = (
                     "<td class='%s'>%s</td>"
                     "<td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
-                    "<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
+                    "<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
                     % (cls, esc(a.confidence), esc(a.host or ""), esc(a.ip or ""),
                        esc(str(a.port or "")), esc(a.title or ""), esc(a.server or ""),
                        esc((a.tech or "")[:40]),
                        esc(getattr(a, "scope", "") or "-"),
+                       esc(getattr(a, "cloud", "") or "-"),
                        esc("、".join(f.split("|", 1)[-1] for f in sorted(a.findings))),
                        esc(plain_evidence(a.evidence))))
                 if show_reason:
@@ -6581,6 +6721,18 @@ class Engine(object):
                      "<div class='card'><b class='warn'>%d</b>疑似</div>"
                      "<div class='card'><b class='muted2'>%d</b>剔除</div></div>"
                      % (c["确认"], c["疑似"], c["存疑"]))
+
+        # 云资产分布（云厂商维度）
+        clouded = [a for a in rows if getattr(a, "cloud", "")]
+        if clouded:
+            cc = {}
+            for a in clouded:
+                cc[a.cloud] = cc.get(a.cloud, 0) + 1
+            items = "、".join("%s %d" % (k, v)
+                              for k, v in sorted(cc.items(), key=lambda kv: -kv[1]))
+            parts.append("<p class='muted'>☁ 云资产 %d 个：%s（域名不备案、"
+                         "不以公司名命名时，云归属是重要线索）</p>"
+                         % (len(clouded), esc(items)))
 
         if baseline_diff:
             parts.append("<h2>增量对比（上轮 %s）</h2>" % esc(baseline_diff.get("prev_ts", "?")))
@@ -7592,6 +7744,8 @@ def run_pipeline(args, names, domains, ips, should_stop=None, do_output=True):
         if not fast:
             progress(44, "归属扩展（统计ID/令牌/证书）")
             eng.expand_identity_pivots()
+            progress(46, "关联扩展（证书O=精确反查）")
+            eng.expand_related_assets()
         if getattr(args, "scan_asn", False):
             progress(47, "ASN 网段扩展")
             asns = set(getattr(args, "asn", None) or []) | set(eng.anchor["asns"])

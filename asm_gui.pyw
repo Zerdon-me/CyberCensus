@@ -253,7 +253,7 @@ def _to_int(s, default):
 
 
 def asset_rows(eng, max_evidence=2):
-    """从引擎结果提取表格行：[(分类, 主机, IP, 端口, 标题, 敏感发现, 归属说明, tag), ...]。
+    """从引擎结果提取表格行：[(分类, 主机, IP, 端口, 标题, 敏感发现, 归属说明, 云, tag), ...]。
 
     按 确认 → 疑似 → 存疑 排序；归属说明用白话证据（截断到 max_evidence 条）。
     纯函数，供界面表格与单元测试共用。
@@ -266,7 +266,8 @@ def asset_rows(eng, max_evidence=2):
         findings = "、".join(sorted(f.split("|", 1)[-1] for f in a.findings))
         rows.append((
             a.confidence, a.host or a.ip or "", a.ip or "", str(a.port or ""),
-            a.title or "", findings, plain, tag_map.get(a.confidence, "unknown"),
+            a.title or "", findings, plain,
+            getattr(a, "cloud", "") or "", tag_map.get(a.confidence, "unknown"),
         ))
     rows.sort(key=lambda r: (order.get(r[0], 3), r[1], r[3]))
     return rows
@@ -837,8 +838,8 @@ class App(ctk.CTk):
                                     text_color=GRAY)
         self.lbl_sel.pack(side="right")
 
-        cols = ("选", "分类", "主机", "IP", "端口", "标题", "敏感发现", "归属说明")
-        widths = (32, 54, 160, 100, 46, 145, 100, 220)
+        cols = ("选", "分类", "主机", "IP", "端口", "标题", "敏感发现", "归属说明", "云")
+        widths = (32, 54, 160, 100, 46, 145, 100, 220, 80)
         self.tree = ttk.Treeview(tab_assets, columns=cols, show="headings",
                                  selectmode="browse")
         for c, w in zip(cols, widths):
@@ -1538,7 +1539,8 @@ class App(ctk.CTk):
             self.tree.insert("", "end", iid=iid, values=(
                 "☑" if checked else "☐",
                 a.confidence, a.host or a.ip or "", a.ip or "", str(a.port or ""),
-                a.title or "", findings, plain),
+                a.title or "", findings, plain,
+                getattr(a, "cloud", "") or ""),
                 tags=(tag_map.get(a.confidence, "unknown"),))
             self._asset_by_iid[iid] = a
         self._update_cards()

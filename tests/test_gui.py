@@ -80,9 +80,11 @@ class TestAssetRows(unittest.TestCase):
         self.assertEqual(rows[1][5], "")
         # 归属说明是白话（含"备案号"字样），不是原始 A| 证据串
         self.assertIn("备案号", rows[0][6])
+        # 云资产列（默认为空）
+        self.assertEqual(rows[0][7], "")
         # tag 映射正确
-        self.assertEqual(rows[0][7], "confirmed")
-        self.assertEqual(rows[1][7], "unknown")
+        self.assertEqual(rows[0][8], "confirmed")
+        self.assertEqual(rows[1][8], "unknown")
 
     def test_empty_engine(self):
         import argparse
