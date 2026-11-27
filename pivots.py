@@ -19,6 +19,9 @@ pivots.py —— 可插拔关联源（Pivot Sources）
 import re
 import time
 
+_QM_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+          "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+
 try:
     from cybercensus import (crt_by_org, reverse_ip, rapiddns_sameip,
                              root_domain, log)
@@ -186,7 +189,7 @@ class OptionalAppchinaPivot(PivotSource):
     def discover(self, ctx):
         out = []
         try:
-            from cybercensus import http_get, _decode_region_brand
+            from cybercensus import http_get
         except Exception:
             return out
         for name in list(ctx.names)[:2]:
@@ -204,6 +207,76 @@ class OptionalAppchinaPivot(PivotSource):
         return out
 
 
+class QimaiWebPivot(PivotSource):
+    """七麦数据 qimai.cn 网页版公开搜索页（无需账号，best-effort）。
+
+    https://www.qimai.cn/search/index/m/search?k=<关键词>
+    - 公开页可看到 APP 名称与厂商字段（部分数据需会员，这里只取公开渲染部分）
+    - 反爬较严（UA/频率），失败静默返回空
+    - 拿到的是「APP 名称 + 厂商」文本对，归属过滤交给引擎
+    """
+    name = "qimai-web"
+    label = "七麦数据（网页版公开页）"
+
+    def discover(self, ctx):
+        out = []
+        try:
+            from cybercensus import http_get
+        except Exception:
+            return out
+        for name in list(ctx.names)[:2]:
+            try:
+                url = ("https://www.qimai.cn/search/index/m/search?k="
+                       + urllib_parse_quote(name))
+                html = http_get(url, timeout=15, retries=1,
+                                headers={"User-Agent": _QM_UA,
+                                         "Referer": "https://www.qimai.cn/"})
+            except Exception:
+                continue
+            # 公开列表页结构：APP 名与厂商多在 <a> / <td> 中；宽松提取文本对
+            # 只收集「含中文的文本行 + 相邻厂商列」——解析失败即空
+            for m in re.finditer(
+                    r'<a[^>]+class="[^"]*list[^"]*"[^>]*>([^<]{2,40})</a>', html):
+                txt = (m.group(1) or "").strip()
+                if txt:
+                    out.append(("qimai-app", txt))
+        return out
+
+
+class XiaolanbenWebPivot(PivotSource):
+    """小蓝本 xiaolanben.com 企业关联公开页（无需账号部分，best-effort）。
+
+    https://www.xiaolanben.com/pc/search?key=<关键词>
+    - 未登录时能看到企业名/域名摘要；登录后数据更全（CyberCensus 不内置凭据）
+    - 解析失败/需要登录时静默返回空
+    """
+    name = "xiaolanben-web"
+    label = "小蓝本（企业关联公开页）"
+
+    def discover(self, ctx):
+        out = []
+        try:
+            from cybercensus import http_get
+        except Exception:
+            return out
+        for name in list(ctx.names)[:2]:
+            try:
+                url = ("https://www.xiaolanben.com/pc/search?key="
+                       + urllib_parse_quote(name))
+                html = http_get(url, timeout=15, retries=1,
+                                headers={"User-Agent": _QM_UA})
+            except Exception:
+                continue
+            # 宽松提取页面里的域名候选（含 icp/企业摘要中出现的主域）
+            for m in re.finditer(
+                    r'([a-z0-9][a-z0-9\-]{1,40}\.(?:com|cn|net|com\.cn|net\.cn|org\.cn))',
+                    html, re.I):
+                d = m.group(1).strip().lower()
+                if d and "." in d and len(d) > 5:
+                    out.append(("xiaolanben-dom", d))
+        return out
+
+
 def urllib_parse_quote(s):
     import urllib.parse
     return urllib.parse.quote(str(s or ""))
@@ -211,12 +284,12 @@ def urllib_parse_quote(s):
 
 # 需要账号/接口的可选源（占位：标注能力与所需凭据，CyberCensus 不内置凭据）
 OPTIONAL_SOURCES = [
-    {"name": "qimai", "label": "七麦数据", "needs": "七麦账号/Cookie（VIP 接口）",
-     "status": "未内置：请自行实现 QimaiPivot 并 register()"},
+    {"name": "qimai-vip", "label": "七麦数据（会员接口）",
+     "needs": "七麦账号/Cookie", "status": "网页版公开页已内置（qimai-web）"},
     {"name": "xiaohongshu", "label": "小红书企业号", "needs": "小红书 Cookie",
-     "status": "未内置：反爬较强，建议人工查询"},
-    {"name": "xiaolanben", "label": "小蓝本（企业关联）", "needs": "小蓝本账号",
-     "status": "未内置：请自行实现并 register()"},
+     "status": "反爬较强，建议人工查询"},
+    {"name": "xiaolanben-vip", "label": "小蓝本（会员接口）",
+     "needs": "小蓝本账号", "status": "网页版公开页已内置（xiaolanben-web）"},
 ]
 
 
@@ -269,6 +342,8 @@ PIVOT_REGISTRY.register(ReverseWhoisPivot())
 PIVOT_REGISTRY.register(CloudAffinityPivot())
 PIVOT_REGISTRY.register(PassiveDnsPivot())
 PIVOT_REGISTRY.register(OptionalAppchinaPivot())
+PIVOT_REGISTRY.register(QimaiWebPivot())
+PIVOT_REGISTRY.register(XiaolanbenWebPivot())
 
 # APP 发现源注册表：默认空（itunes 内置在 Engine 里）；
 # 用户实现 QimaiSource / XiaolanbenSource 并 register() 即可启用可选源

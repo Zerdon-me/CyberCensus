@@ -73,10 +73,10 @@ I18N = {
         "生成报告…": "Export Report…", "打开输出文件夹": "Open Output Folder",
         "查看网页报告": "View HTML Report", "查看MD报告": "View MD Report",
         "全选": "Select All", "取消全选": "Deselect All",
-        "标记确认": "Mark Confirmed", "标记疑似": "Mark Suspect",
-        "标记存疑": "Mark Rejected",
+        "标记确认": "Confirm", "标记疑似": "Suspect",
+        "标记存疑": "Reject",
         "复制URL": "Copy URL", "复制主机": "Copy Host",
-        "导出选中CSV": "Export Selected CSV",
+        "导出选中CSV": "Export CSV",
         "确认资产": "Confirmed", "疑似资产": "Suspected", "剔除（存疑）": "Rejected",
         "测绘目标": "Target", "扫描模式": "Scan Mode",
         "测绘平台": "Platforms", "增强引擎": "Engines", "配置": "Config",
@@ -84,6 +84,24 @@ I18N = {
         "配置平台 Key…": "Configure API Keys…",
         "关于 / 使用条款": "About / Terms",
         "检查 / 更新增强引擎": "Check / Update Engines",
+        "互联网暴露面测绘  //  ATTACK SURFACE INTELLIGENCE":
+            "Internet Exposure Mapping  //  ATTACK SURFACE INTELLIGENCE",
+        "● 未配 Key 也可运行：8 个本地被动源":
+            "● Works without API keys: 8 passive sources",
+        "未安装的引擎自动跳过（纯被动仅 subfinder）":
+            "Missing engines are skipped (passive uses subfinder only)",
+        "选": "Sel", "分类": "Class", "主机": "Host", "IP": "IP",
+        "端口": "Port", "标题": "Title", "敏感发现": "Findings",
+        "归属说明": "Attribution", "云": "Cloud",
+        "应用名": "App", "开发者": "Developer", "包名": "Bundle ID",
+        "归属依据": "Basis",
+        "任务": "Task", "周期": "Interval", "上次运行": "Last Run",
+        "下次运行": "Next Run", "状态": "Status",
+        "搜索主机 / IP / 标题…": "Search host / IP / title…",
+        "点击上方卡片筛选；再次点击取消 · 双击资产行可人工复核":
+            "Click a card to filter; click again to reset · double-click a row to review",
+        "// THEME  ·  主题": "// THEME",
+        "// LANGUAGE  ·  语言": "// LANGUAGE",
     },
 }
 _LANG = "zh"
@@ -497,7 +515,7 @@ class App(ctk.CTk):
                                              pady=(10, 8))
         ctk.CTkLabel(bar, text="CYBERCENSUS", font=self.f_brand, text_color=TEXT
                      ).grid(row=0, column=1, sticky="sw", pady=(12, 0))
-        ctk.CTkLabel(bar, text="互联网暴露面测绘  //  ATTACK SURFACE INTELLIGENCE",
+        ctk.CTkLabel(bar, text=tr("互联网暴露面测绘  //  ATTACK SURFACE INTELLIGENCE"),
                      text_color=GRAY, font=self.f_mono_sm
                      ).grid(row=1, column=1, sticky="nw", pady=(0, 12))
 
@@ -571,7 +589,7 @@ class App(ctk.CTk):
             sw.pack(anchor="w", padx=14, pady=5)
             self.sw_platforms[name] = sw
             self.var_platforms[name] = var
-        ctk.CTkLabel(card, text="● 未配 Key 也可运行：8 个本地被动源",
+        ctk.CTkLabel(card, text=tr("● 未配 Key 也可运行：8 个本地被动源"),
                      text_color=GREEN, font=self.f_mono_sm
                      ).pack(anchor="w", padx=14, pady=(6, 12))
 
@@ -595,11 +613,11 @@ class App(ctk.CTk):
             st.pack(side="right")
             self._engine_rows[name] = (dot, nm, st)
         self._refresh_engine_rows()
-        ctk.CTkLabel(card3, text="未安装的引擎自动跳过（纯被动仅 subfinder）",
+        ctk.CTkLabel(card3, text=tr("未安装的引擎自动跳过（纯被动仅 subfinder）"),
                      text_color=GRAY, font=self.f_mono_sm, wraplength=220,
                      justify="left").pack(anchor="w", padx=14, pady=(6, 4))
         self.btn_update_tools = ctk.CTkButton(
-            card3, text="⟳  检查 / 更新增强引擎", height=30, corner_radius=7,
+            card3, text="⟳  " + tr("检查 / 更新增强引擎"), height=30, corner_radius=7,
             fg_color="transparent", border_width=1, border_color=STROKE,
             hover_color=CARD_HI, text_color=ACCENT, font=self.f_mono_sm,
             command=self._open_engine_updater)
@@ -610,12 +628,12 @@ class App(ctk.CTk):
         card2 = ctk.CTkFrame(sb, corner_radius=10, fg_color=CARD,
                              border_width=1, border_color=STROKE)
         card2.pack(fill="x", padx=14)
-        ctk.CTkButton(card2, text="⚙  配置平台 Key…", command=self._open_key_dialog,
+        ctk.CTkButton(card2, text="⚙  " + tr("配置平台 Key…"), command=self._open_key_dialog,
                       height=34, corner_radius=8, fg_color="transparent",
                       border_width=1, border_color=STROKE, hover_color=CARD_HI,
                       text_color=TEXT, font=self.f_body
                       ).pack(fill="x", padx=12, pady=(12, 6))
-        ctk.CTkButton(card2, text="ⓘ  关于 / 使用条款", command=self._open_about,
+        ctk.CTkButton(card2, text="ⓘ  " + tr("关于 / 使用条款"), command=self._open_about,
                       height=30, corner_radius=8, fg_color="transparent",
                       border_width=1, border_color=STROKE, hover_color=CARD_HI,
                       text_color=GRAY, font=self.f_mono_sm
@@ -625,7 +643,7 @@ class App(ctk.CTk):
         legend = ctk.CTkFrame(sb, fg_color="transparent")
         legend.pack(side="bottom", fill="x", padx=18, pady=14)
         # 主题切换（昼白 / 夜黑）+ 语言切换（中文 / English）
-        ctk.CTkLabel(legend, text="// THEME  ·  主题", font=self.f_mono_sm,
+        ctk.CTkLabel(legend, text=tr("// THEME  ·  主题"), font=self.f_mono_sm,
                      text_color=GRAY, anchor="w").pack(fill="x")
         self.seg_theme = ctk.CTkSegmentedButton(
             legend, values=list(THEMES.keys()), command=self._on_theme_change,
@@ -643,7 +661,7 @@ class App(ctk.CTk):
         except Exception:
             pass
         # 语言切换（中文 / English）
-        ctk.CTkLabel(legend, text="// LANGUAGE  ·  语言", font=self.f_mono_sm,
+        ctk.CTkLabel(legend, text=tr("// LANGUAGE  ·  语言"), font=self.f_mono_sm,
                      text_color=GRAY, anchor="w").pack(fill="x")
         self.seg_lang = ctk.CTkSegmentedButton(
             legend, values=["中文", "English"], command=self._on_lang_change,
@@ -1006,7 +1024,7 @@ class App(ctk.CTk):
 
         import tkinter.ttk as ttk
         self.lbl_filter = ctk.CTkLabel(
-            tab_assets, text="点击上方卡片筛选；再次点击取消 · 双击资产行可人工复核",
+            tab_assets, text=tr("点击上方卡片筛选；再次点击取消 · 双击资产行可人工复核"),
             font=self.f_mono_sm, text_color=GRAY, anchor="w")
         self.lbl_filter.pack(fill="x", padx=8, pady=(2, 1))
 
@@ -1014,14 +1032,14 @@ class App(ctk.CTk):
         frm_sel = ctk.CTkFrame(tab_assets, fg_color="transparent")
         frm_sel.pack(fill="x", padx=8, pady=(0, 3))
         self.btn_select_all = ctk.CTkButton(
-            frm_sel, text="☐ 全选", width=82, height=26, corner_radius=6,
+            frm_sel, text="☐ " + tr("全选"), width=82, height=26, corner_radius=6,
             fg_color="transparent", border_width=1, border_color=STROKE,
             text_color=ACCENT, hover_color=CARD_HI, font=self.f_mono_sm,
             command=self._toggle_select_all)
         self.btn_select_all.pack(side="left")
-        for label, val, color in (("标记确认", "确认", GREEN),
-                                  ("标记疑似", "疑似", ORANGE),
-                                  ("标记存疑", "存疑", GRAY)):
+        for label, val, color in ((tr("标记确认"), "确认", GREEN),
+                                  (tr("标记疑似"), "疑似", ORANGE),
+                                  (tr("标记存疑"), "存疑", GRAY)):
             ctk.CTkButton(
                 frm_sel, text=label, width=76, height=26, corner_radius=6,
                 fg_color="transparent", border_width=1, border_color=color,
@@ -1029,19 +1047,19 @@ class App(ctk.CTk):
                 command=lambda v=val: self._bulk_mark(v)
             ).pack(side="left", padx=(6, 0))
         ctk.CTkButton(
-            frm_sel, text="复制URL", width=74, height=26, corner_radius=6,
+            frm_sel, text=tr("复制URL"), width=74, height=26, corner_radius=6,
             fg_color="transparent", border_width=1, border_color=ACCENT,
             text_color=ACCENT, hover_color=CARD_HI, font=self.f_mono_sm,
             command=lambda: self._copy_selected("url")
         ).pack(side="left", padx=(12, 0))
         ctk.CTkButton(
-            frm_sel, text="复制主机", width=74, height=26, corner_radius=6,
+            frm_sel, text=tr("复制主机"), width=74, height=26, corner_radius=6,
             fg_color="transparent", border_width=1, border_color=STROKE,
             text_color=TEXT, hover_color=CARD_HI, font=self.f_mono_sm,
             command=lambda: self._copy_selected("host")
         ).pack(side="left", padx=(6, 0))
         ctk.CTkButton(
-            frm_sel, text="导出选中CSV", width=96, height=26, corner_radius=6,
+            frm_sel, text=tr("导出选中CSV"), width=96, height=26, corner_radius=6,
             fg_color="transparent", border_width=1, border_color=STROKE,
             text_color=TEXT, hover_color=CARD_HI, font=self.f_mono_sm,
             command=self._export_selected
@@ -1049,7 +1067,7 @@ class App(ctk.CTk):
         self.var_asset_search = ctk.StringVar(value="")
         ent_search = ctk.CTkEntry(
             frm_sel, textvariable=self.var_asset_search, width=170, height=26,
-            placeholder_text="搜索主机 / IP / 标题…", font=self.f_mono_sm)
+            placeholder_text=tr("搜索主机 / IP / 标题…"), font=self.f_mono_sm)
         ent_search.pack(side="left", padx=(12, 0))
         ent_search.bind("<KeyRelease>", lambda e: self._render_assets())
         self.lbl_sel = ctk.CTkLabel(frm_sel, text="已选 0", width=70,
@@ -1057,7 +1075,7 @@ class App(ctk.CTk):
                                     text_color=GRAY)
         self.lbl_sel.pack(side="right")
 
-        cols = ("选", "分类", "主机", "IP", "端口", "标题", "敏感发现", "归属说明", "云")
+        cols = tuple(tr(x) for x in ("选", "分类", "主机", "IP", "端口", "标题", "敏感发现", "归属说明", "云"))
         widths = (32, 54, 160, 100, 46, 145, 100, 220, 80)
         self.tree = ttk.Treeview(tab_assets, columns=cols, show="headings",
                                  selectmode="browse")
@@ -1080,7 +1098,7 @@ class App(ctk.CTk):
         self.tree.bind("<Button-3>", self._on_tree_right)
 
         # APP 应用标签页（App Store 发现的移动端资产）
-        acols = ("应用名", "开发者", "包名", "归属依据")
+        acols = tuple(tr(x) for x in ("应用名", "开发者", "包名", "归属依据"))
         awidths = (240, 320, 260, 260)
         self.tree_apps = ttk.Treeview(tab_apps, columns=acols, show="headings",
                                       selectmode="browse")
@@ -1401,7 +1419,7 @@ class App(ctk.CTk):
                                        text_color=GRAY, anchor="w")
         self.lbl_cruise.pack(fill="x", pady=(0, 4))
 
-        cols = ("任务", "周期", "上次运行", "下次运行", "状态")
+        cols = tuple(tr(x) for x in ("任务", "周期", "上次运行", "下次运行", "状态"))
         widths = (220, 80, 150, 150, 260)
         self.tree_cruise = ttk.Treeview(tab, columns=cols, show="headings",
                                         selectmode="browse")
