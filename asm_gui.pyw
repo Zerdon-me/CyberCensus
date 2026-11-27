@@ -510,9 +510,19 @@ class App(ctk.CTk):
         bar.grid(row=0, column=0, columnspan=2, sticky="ew")
         bar.grid_columnconfigure(1, weight=1)
 
-        ctk.CTkLabel(bar, text="◈", font=ctk.CTkFont(family=MONO, size=28, weight="bold"),
-                     text_color=ACCENT).grid(row=0, column=0, rowspan=2, padx=(24, 12),
-                                             pady=(10, 8))
+        # 头栏 logo：直接用新 logo 图（与 exe 图标/social preview 同一设计）
+        try:
+            from PIL import Image as _PILImage
+            _img = _PILImage.open(_asset_path("docs", "logo.png")).resize((56, 56))
+            self._hdr_logo = ctk.CTkImage(light_image=_img, dark_image=_img,
+                                          size=(56, 56))
+            lbl_logo = ctk.CTkLabel(bar, image=self._hdr_logo, text="")
+        except Exception:
+            lbl_logo = ctk.CTkLabel(bar, text="◈",
+                                    font=ctk.CTkFont(family=MONO, size=28,
+                                                     weight="bold"),
+                                    text_color=ACCENT)
+        lbl_logo.grid(row=0, column=0, rowspan=2, padx=(18, 10), pady=(8, 6))
         ctk.CTkLabel(bar, text="CYBERCENSUS", font=self.f_brand, text_color=TEXT
                      ).grid(row=0, column=1, sticky="sw", pady=(12, 0))
         ctk.CTkLabel(bar, text=tr("互联网暴露面测绘  //  ATTACK SURFACE INTELLIGENCE"),
@@ -521,7 +531,7 @@ class App(ctk.CTk):
 
         ctk.CTkLabel(bar, text=" V%s " % cybercensus.__version__,
                      font=self.f_mono_sm, text_color=ACCENT,
-                     fg_color="#0a2230", corner_radius=4, height=20, padx=6
+                     fg_color=CARD_HI, corner_radius=4, height=20, padx=6
                      ).grid(row=0, column=2, rowspan=2, padx=(0, 12))
 
         self.lbl_mode_tag = ctk.CTkLabel(
@@ -754,7 +764,7 @@ class App(ctk.CTk):
                       "wafw00f 随发布包更新。下载失败会自动尝试镜像。",
             font=self.f_mono_sm, text_color=GRAY, anchor="w",
             wraplength=730, justify="left").pack(anchor="w", padx=18)
-        txt = ctk.CTkTextbox(win, fg_color="#08101c", text_color=TEXT,
+        txt = ctk.CTkTextbox(win, fg_color=TREE_BG, text_color=TEXT,
                              font=self.f_mono_sm, corner_radius=8,
                              border_width=1, border_color=STROKE)
         txt.pack(fill="both", expand=True, padx=18, pady=(10, 8))
@@ -891,7 +901,7 @@ class App(ctk.CTk):
         self.ent_target = ctk.CTkEntry(
             card_t, textvariable=self.var_target, height=42,
             font=ctk.CTkFont(size=14), corner_radius=8, border_color=STROKE,
-            fg_color="#080e16",
+            fg_color=TREE_BG,
             placeholder_text="单位名称 / 域名 / IP / 网段 —— 空格或逗号分隔")
         self.ent_target.pack(fill="x", padx=16, pady=(2, 2))
         self.ent_target.bind("<KeyRelease>", lambda e: self._preview_target())
@@ -939,7 +949,7 @@ class App(ctk.CTk):
                                      "color": color, "hover": hover}
 
         # ---- 能力矩阵（随模式实时变化） ----
-        box = ctk.CTkFrame(m, corner_radius=8, fg_color="#0a1220",
+        box = ctk.CTkFrame(m, corner_radius=8, fg_color=CARD_HI,
                            border_width=1, border_color=STROKE)
         box.pack(fill="x", pady=(6, 0))
         self.cap_row = ctk.CTkFrame(box, fg_color="transparent")
@@ -1114,7 +1124,7 @@ class App(ctk.CTk):
 
         self.txt_log = ctk.CTkTextbox(tab_log, font=ctk.CTkFont(family=MONO, size=12),
                                       wrap="word", corner_radius=8,
-                                      fg_color="#060b11", border_width=0)
+                                      fg_color=TREE_BG, border_width=0)
         self.txt_log.pack(fill="both", expand=True)
         self.txt_log.configure(state="disabled")
         self._apply_log_palette("dark")
@@ -2047,7 +2057,7 @@ class App(ctk.CTk):
         win.configure(fg_color=BG)
         win.transient(self)
         win.after(250, lambda: win.grab_set())
-        txt = ctk.CTkTextbox(win, fg_color="#08101c", text_color=TEXT,
+        txt = ctk.CTkTextbox(win, fg_color=TREE_BG, text_color=TEXT,
                              font=self.f_mono_sm, corner_radius=8,
                              border_width=1, border_color=STROKE)
         txt.pack(fill="both", expand=True, padx=16, pady=(14, 8))
@@ -2242,7 +2252,7 @@ class App(ctk.CTk):
                      font=ctk.CTkFont(size=15, weight="bold"),
                      text_color=TEXT, anchor="w").pack(fill="x", padx=20)
 
-        txt = ctk.CTkTextbox(win, fg_color="#08101c", text_color=TEXT,
+        txt = ctk.CTkTextbox(win, fg_color=TREE_BG, text_color=TEXT,
                              font=self.f_mono_sm, corner_radius=8,
                              border_width=1, border_color=STROKE)
         txt.pack(fill="both", expand=True, padx=20, pady=12)
