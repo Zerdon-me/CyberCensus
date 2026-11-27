@@ -54,7 +54,7 @@ except Exception:          # 单文件运行/裁剪包时退化为内置小表
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
-__version__ = "0.16.0"
+__version__ = "0.16.1"
 
 # ----------------------------------------------------------------------------
 # 可选依赖

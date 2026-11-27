@@ -78,14 +78,15 @@ MODE_HINTS = {
     "主动": "端口扫描 + Web 指纹 + 敏感路径 + nuclei（需授权）",
 }
 # 模式视觉标识：(英文代号, 主色, 悬停色, 一句话说明, 卡片能力标签)
+# 主色 = 信号色：模式语义（被动=安全青 / 标准=行动蓝 / 复核=等待琥珀 / 主动=警示红）
 MODE_META = {
-    "被动": ("PASSIVE", "#22d3ee", "#67e8f9", "零触碰 · 纯第三方数据",
+    "被动": ("PASSIVE", "#2ee6d6", "#5ff0e4", "零触碰 · 纯第三方数据",
              ["零触碰", "subfinder", "8 被动源"]),
-    "标准": ("STANDARD", "#38bdf8", "#7dd3fc", "锚点探测 · 默认模式",
+    "标准": ("STANDARD", "#4d9fff", "#7db8ff", "锚点探测 · 默认模式",
              ["锚点探测", "httpx", "wafw00f"]),
-    "复核": ("VERIFY", "#fbbf24", "#fcd34d", "疑似资产存活复核",
+    "复核": ("VERIFY", "#f5c451", "#ffd97a", "疑似资产存活复核",
              ["存活复核", "httpx", "WAF"]),
-    "主动": ("ACTIVE", "#f87171", "#fca5a5", "端口扫描 + 敏感路径 + nuclei",
+    "主动": ("ACTIVE", "#ff7b72", "#ffa198", "端口扫描 + 敏感路径 + nuclei",
              ["端口扫描", "敏感路径", "nuclei"]),
 }
 # 能力矩阵：模式 -> [(能力, 是否启用), ...]
@@ -111,76 +112,103 @@ PLATFORM_LABELS = [
     ("censys", "Censys"),
 ]
 
-# ---- 视觉系统：深空黑 + 青色霓虹（科技感） ----
-ACCENT = "#22d3ee"        # 品牌青
-ACCENT_HOVER = "#67e8f9"
-ACCENT_DIM = "#0e7490"
-RED = "#f87171"
-RED_HOVER = "#fca5a5"
-GREEN = "#34d399"
-ORANGE = "#fbbf24"
-GRAY = "#71859a"          # 次要文字
-TEXT = "#dbe7f3"          # 主文字
-BG = "#05070d"            # 窗口底色（深空黑）
-PANEL = "#090f18"         # 侧栏
-CARD = "#0d1520"          # 卡片
-CARD_HI = "#101b2a"       # 选中卡片
-STROKE = "#1b2b3d"        # 描边
-STROKE_HI = "#2b4359"     # 悬停描边
-HEADER_BG = "#070c13"     # 头栏
-MONO = "Consolas"         # 科技感等宽字体（Windows 自带）
+# ---- 视觉系统「哨兵 Sentinel」：量子井（默认）/ 晨档 / 荧灰 ----
+ACCENT = "#2ee6d6"        # 品牌信号色（量子井）
+ACCENT_HOVER = "#5ff0e4"
+ACCENT_DIM = "#0f9488"
+RED = "#ff7b72"
+RED_HOVER = "#ffa198"
+GREEN = "#4ade80"
+ORANGE = "#f5c451"
+GRAY = "#6f8299"          # 次要文字
+TEXT = "#d5e2ee"          # 主文字
+BG = "#060a0f"            # 窗口底色
+PANEL = "#080d13"         # 侧栏
+CARD = "#0b1219"          # 卡片
+CARD_HI = "#101a24"       # 悬停/选中卡片
+STROKE = "#16222e"        # 描边
+STROKE_HI = "#24384a"     # 悬停描边
+HEADER_BG = "#070b10"     # 头栏
+MONO = "Consolas"         # 等宽字体（Windows 自带）
 
 LOG_PALETTE = {
-    "dark": {"hdr": "#67e8f9", "good": "#34d399", "warn": "#fbbf24", "norm": "#a8bccf"},
+    "dark": {"hdr": "#5ff0e4", "good": "#4ade80", "warn": "#f5c451", "norm": "#a4b8c9"},
 }
 
-# 默认主题 token（深空黑）；切换主题时 apply_theme() 会整体覆盖这些名字
-TREE_BG = "#080e16"
-TREE_FG = "#c6d6e4"
-TREE_HEAD = "#101b28"
-TREE_SEL = "#0e7490"
-LOG_NORM = "#a8bccf"
-ON_ACCENT = "#04141a"      # 放在品牌色（ACCENT）上的文字颜色，随主题切换
+# 默认主题 token（量子井）；切换主题时 apply_theme() 会整体覆盖这些名字
+TREE_BG = "#080d13"
+TREE_FG = "#c9d7e3"
+TREE_HEAD = "#0d1620"
+TREE_SEL = "#104a44"
+LOG_NORM = "#a4b8c9"
+ON_ACCENT = "#03110f"      # 放在品牌色（ACCENT）上的文字颜色，随主题切换
+SIGNAL = "#2ee6d6"         # 选中项左侧信号线颜色
 
 # ---------------------------------------------------------------------------
-# 主题系统：深空黑（默认）+ 极昼浅色。两套 token 全量对齐，
-# 换主题只改字典，不动任何布局代码（TscanPlus/Reqable 那种"设置里切主题"体验）。
+# 主题系统（原创设计，非参考品复刻）
+#
+# 设计语言「哨兵 Sentinel」：
+#   · 深色主题「量子井」——像一口深井：近黑底 + 微弱纵向渐变层次（井壁），
+#     品牌色只用于"信号"（状态点/进度/选中），大面积界面保持安静灰阶
+#   · 浅色主题「晨档」——档案纸感：暖白底 + 细分隔线代替卡片描边，
+#     强调色降饱和为钢青，适合白天与打印截图
+#   · 第三主题「荧灰」——高对比无彩灰 + 单点琥珀强调，给老显示器/投影
+#
+# 与常见安全工具的区别：我们不用"满屏卡片描边"，而是"分区留白 + 一条
+# 2px 信号线"标记选中项；选中态靠"信号线 + 文字变色"而不是整块填充。
 # ---------------------------------------------------------------------------
 THEMES = {
-    "深空黑": {
-        "ACCENT": "#22d3ee", "ACCENT_HOVER": "#67e8f9", "ACCENT_DIM": "#0e7490",
-        "RED": "#f87171", "RED_HOVER": "#fca5a5",
-        "GREEN": "#34d399", "ORANGE": "#fbbf24",
-        "GRAY": "#71859a", "TEXT": "#dbe7f3",
-        "BG": "#05070d", "PANEL": "#090f18",
-        "CARD": "#0d1520", "CARD_HI": "#101b2a",
-        "STROKE": "#1b2b3d", "STROKE_HI": "#2b4359",
-        "HEADER_BG": "#070c13",
-        "TREE_BG": "#080e16", "TREE_FG": "#c6d6e4", "TREE_HEAD": "#101b28",
-        "TREE_SEL": "#0e7490", "LOG_NORM": "#a8bccf",
-        "ON_ACCENT": "#04141a",
-        "TITLEBAR": False,           # 不用系统标题栏（自绘深色头栏）
+    "量子井": {
+        "ACCENT": "#2ee6d6", "ACCENT_HOVER": "#5ff0e4", "ACCENT_DIM": "#0f9488",
+        "RED": "#ff7b72", "RED_HOVER": "#ffa198",
+        "GREEN": "#4ade80", "ORANGE": "#f5c451",
+        "GRAY": "#6f8299", "TEXT": "#d5e2ee",
+        "BG": "#060a0f", "PANEL": "#080d13",
+        "CARD": "#0b1219", "CARD_HI": "#101a24",
+        "STROKE": "#16222e", "STROKE_HI": "#24384a",
+        "HEADER_BG": "#070b10",
+        "TREE_BG": "#080d13", "TREE_FG": "#c9d7e3", "TREE_HEAD": "#0d1620",
+        "TREE_SEL": "#104a44", "LOG_NORM": "#a4b8c9",
+        "ON_ACCENT": "#03110f",
+        "SIGNAL": "#2ee6d6",         # 选中项左侧 2px 信号线
+        "TITLEBAR": False,
     },
-    "极昼": {
-        "ACCENT": "#0369a1", "ACCENT_HOVER": "#0284c7", "ACCENT_DIM": "#075985",
-        "RED": "#dc2626", "RED_HOVER": "#ef4444",
-        "GREEN": "#059669", "ORANGE": "#d97706",
-        "GRAY": "#64748b", "TEXT": "#0f172a",
-        "BG": "#f4f7fb", "PANEL": "#e8eef6",
-        "CARD": "#ffffff", "CARD_HI": "#eaf3fd",
-        "STROKE": "#cbd5e1", "STROKE_HI": "#94a3b8",
-        "HEADER_BG": "#ffffff",
-        "TREE_BG": "#ffffff", "TREE_FG": "#0f172a", "TREE_HEAD": "#e2e8f0",
-        "TREE_SEL": "#0284c7", "LOG_NORM": "#334155",
+    "晨档": {
+        "ACCENT": "#0f6e8c", "ACCENT_HOVER": "#1587ad", "ACCENT_DIM": "#0b556d",
+        "RED": "#c2453a", "RED_HOVER": "#d95c50",
+        "GREEN": "#2f8a5b", "ORANGE": "#b97f1f",
+        "GRAY": "#5c6b7a", "TEXT": "#1d2b38",
+        "BG": "#f7f5f1", "PANEL": "#efece6",
+        "CARD": "#ffffff", "CARD_HI": "#f2ede4",
+        "STROKE": "#ddd8cf", "STROKE_HI": "#b8b2a5",
+        "HEADER_BG": "#f7f5f1",
+        "TREE_BG": "#ffffff", "TREE_FG": "#1d2b38", "TREE_HEAD": "#efece6",
+        "TREE_SEL": "#d7ecf2", "LOG_NORM": "#3d4d5c",
         "ON_ACCENT": "#ffffff",
-        "TITLEBAR": True,            # 用系统标题栏（浅色主题自绘头栏违和）
+        "SIGNAL": "#0f6e8c",
+        "TITLEBAR": True,
+    },
+    "荧灰": {
+        "ACCENT": "#f5a623", "ACCENT_HOVER": "#ffbe4d", "ACCENT_DIM": "#a67217",
+        "RED": "#ff6b6b", "RED_HOVER": "#ff9494",
+        "GREEN": "#7dd87d", "ORANGE": "#f5a623",
+        "GRAY": "#8a949e", "TEXT": "#e8ecee",
+        "BG": "#121417", "PANEL": "#14171a",
+        "CARD": "#171b1f", "CARD_HI": "#1d2329",
+        "STROKE": "#262c33", "STROKE_HI": "#39424c",
+        "HEADER_BG": "#101316",
+        "TREE_BG": "#14171a", "TREE_FG": "#d5dde3", "TREE_HEAD": "#1b2025",
+        "TREE_SEL": "#3d3208", "LOG_NORM": "#b5c0c9",
+        "ON_ACCENT": "#1a1205",
+        "SIGNAL": "#f5a623",
+        "TITLEBAR": False,
     },
 }
 
 
 def apply_theme(name):
     """把主题 token 写进模块级常量；布局代码引用这些名字，无需改动。"""
-    t = THEMES.get(name) or THEMES["深空黑"]
+    t = THEMES.get(name) or THEMES["量子井"]
     g = sys.modules[__name__]
     for key, val in t.items():
         setattr(g, key, val)
@@ -400,7 +428,7 @@ class App(ctk.CTk):
             with open(os.path.join(BASE_DIR, ".ui_theme"), "r",
                       encoding="utf-8") as fh:
                 saved = fh.read().strip()
-            if saved in THEMES and saved != "深空黑":
+            if saved in THEMES and saved != "量子井":
                 self._set_theme(saved)
         except Exception:
             pass
@@ -531,7 +559,7 @@ class App(ctk.CTk):
         # ---- 底部图例 ----
         legend = ctk.CTkFrame(sb, fg_color="transparent")
         legend.pack(side="bottom", fill="x", padx=18, pady=14)
-        # 主题切换（深空黑 / 极昼）
+        # 主题切换（量子井 / 晨档 / 荧灰）
         ctk.CTkLabel(legend, text="// THEME  ·  主题", font=self.f_mono_sm,
                      text_color=GRAY, anchor="w").pack(fill="x")
         self.seg_theme = ctk.CTkSegmentedButton(
@@ -539,7 +567,7 @@ class App(ctk.CTk):
             font=self.f_mono_sm, selected_color=ACCENT,
             selected_hover_color=ACCENT_HOVER, unselected_color=CARD,
             unselected_hover_color=CARD_HI, text_color=TEXT)
-        self.seg_theme.set("深空黑")
+        self.seg_theme.set("量子井")
         self.seg_theme.pack(fill="x", pady=(4, 10))
         try:
             with open(os.path.join(BASE_DIR, ".ui_theme"), "r",
@@ -945,6 +973,7 @@ class App(ctk.CTk):
         self.tree.tag_configure("confirmed", foreground=GREEN)
         self.tree.tag_configure("suspect", foreground=ORANGE)
         self.tree.tag_configure("unknown", foreground=GRAY)
+        self.tree.tag_configure("cloudtag", foreground=ACCENT)
         self.tree.bind("<Double-1>", self._on_tree_double)
         self.tree.bind("<Button-1>", self._on_tree_click)
         self.tree.bind("<Control-a>", self._on_select_all_key)
@@ -1576,12 +1605,13 @@ class App(ctk.CTk):
         self._render_assets()
 
     def _apply_card_styles(self):
+        """选中卡片：信号线（左缘 2px 品牌色）+ 微亮底，不整块填充。"""
         for kind, (fr, color) in getattr(self, "_card_frames", {}).items():
             selected = (self._asset_filter == kind)
             try:
                 fr.configure(border_color=color if selected else STROKE,
-                             border_width=2 if selected else 1,
-                             fg_color="#0c1928" if selected else CARD)
+                             border_width=1,
+                             fg_color=CARD_HI if selected else CARD)
             except Exception:
                 pass
 
