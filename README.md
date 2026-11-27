@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/logo.svg" width="112" alt="CyberCensus logo"></p>
+<p align="center"><img src="docs/logo.png" width="112" alt="CyberCensus logo"></p>
 
 # CyberCensus —— 单位名称 / 域名 / IP 的互联网暴露面测绘工具
 
@@ -8,7 +8,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D4.svg)](#)
-[![Version](https://img.shields.io/badge/version-0.16.1-22d3ee.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.17.0-22d3ee.svg)](CHANGELOG.md)
 
 <p align="center"><img src="docs/social-preview.png" alt="CyberCensus - Find every exposed asset. Prove every attribution." width="900"></p>
 
@@ -127,7 +127,7 @@ pyinstaller --onefile --windowed --name CyberCensus --collect-all customtkinter 
 - **定时巡航面板**：表格上方「定时巡航」标签页可载入 tasks.json，查看每个任务的下次运行时间与状态，一键**启动/停止后台巡航**、**立即执行一次**；点「+ 当前目标」会把当前目标、模式、输出目录、范围文件、保留轮数自动写成一条任务，不用手写 JSON
 - **资产范围与保留**：高级参数里可选择范围文件、勾选「只看范围内/相似资产」、设置「报告保留 N 轮」，全部在界面完成
 - **端口预设与字典**：高级参数可选择 top 100 / 1000 / 10000、自定义端口或上传端口字典文件；全端口扫描仍保留
-- **原创视觉「哨兵 Sentinel」**：三套主题——「量子井」（默认深色，信号青）/「晨档」（档案纸浅色）/「荧灰」（高对比灰+琥珀）；左侧栏切换，表格/日志/卡片全跟随，选择自动保存。选中态用"信号线+语义色"而非整块填充，长时间使用不腻歪
+- **简约风界面「晴简 Clear」**：昼白（默认）/ 夜黑两主题一键切换；**中英双语**（左侧栏切换，重启生效）；默认窗口自适应屏幕并最大化，打开即见全功能；新简约几何 Logo
 - **首次启动条款确认**：第一次打开会要求确认“仅限自有或已获书面授权的目标 + 已阅读 TERMS”，同意后才能扫描；左侧「关于 / 使用条款」可随时查看版本、许可证和条款
 - **报告页脚**：导出的 HTML/PDF/Word/TXT/Markdown 报告自动带授权声明、项目链接和版本号
 - **复制与导出**：选中后「复制URL」/「复制主机」直接进剪贴板，方便粘贴到浏览器或扫描器；「导出选中CSV」保存主机、IP、端口、URL、归属说明与完整证据

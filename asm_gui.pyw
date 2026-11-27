@@ -59,6 +59,47 @@ from tkinter import messagebox, filedialog, Menu, PhotoImage  # noqa: E402
 
 APP_TITLE = "CyberCensus v%s · 互联网暴露面测绘工具" % cybercensus.__version__
 
+# ---------------------------------------------------------------------------
+# i18n：中英双语。tr("key") 取当前语言文案；缺 key 回退中文。
+# 语言保存在 .ui_lang（zh / en），启动时恢复。
+# ---------------------------------------------------------------------------
+I18N = {
+    "zh": {},   # 中文是源语言，直接写 key
+    "en": {
+        "被动": "Passive", "标准": "Standard", "复核": "Verify", "主动": "Active",
+        "资产列表": "Assets", "APP 应用": "Apps", "运行日志": "Log",
+        "定时巡航": "Scheduler",
+        "开始测绘": "Start Scan", "停止并输出": "Stop & Save",
+        "生成报告…": "Export Report…", "打开输出文件夹": "Open Output Folder",
+        "查看网页报告": "View HTML Report", "查看MD报告": "View MD Report",
+        "全选": "Select All", "取消全选": "Deselect All",
+        "标记确认": "Mark Confirmed", "标记疑似": "Mark Suspect",
+        "标记存疑": "Mark Rejected",
+        "复制URL": "Copy URL", "复制主机": "Copy Host",
+        "导出选中CSV": "Export Selected CSV",
+        "确认资产": "Confirmed", "疑似资产": "Suspected", "剔除（存疑）": "Rejected",
+        "测绘目标": "Target", "扫描模式": "Scan Mode",
+        "测绘平台": "Platforms", "增强引擎": "Engines", "配置": "Config",
+        "主题": "Theme", "高级参数": "Advanced", "就绪": "Ready",
+        "配置平台 Key…": "Configure API Keys…",
+        "关于 / 使用条款": "About / Terms",
+        "检查 / 更新增强引擎": "Check / Update Engines",
+    },
+}
+_LANG = "zh"
+
+
+def tr(text):
+    """取当前语言的界面文案；无翻译时回退原文。"""
+    if _LANG == "zh":
+        return text
+    return I18N.get(_LANG, {}).get(text, text)
+
+
+def set_lang(lang):
+    global _LANG
+    _LANG = lang if lang in I18N else "zh"
+
 
 def _asset_path(*parts):
     base = getattr(sys, "_MEIPASS", "") if getattr(sys, "frozen", False) else BASE_DIR
@@ -71,6 +112,11 @@ TERMS_ACCEPTED = os.path.join(BASE_DIR, ".terms_accepted")
 # 界面模式选项 -> 流水线模式
 MODE_MAP = {"被动": "passive", "标准": "standard", "复核": "verify", "主动": "active"}
 MODE_ORDER = ["被动", "标准", "复核", "主动"]
+
+
+def _mode_labels():
+    """当前语言下的模式标签（内部逻辑仍用中文 key）。"""
+    return [(k, tr(k)) for k in MODE_ORDER]
 MODE_HINTS = {
     "被动": "不向目标发送任何请求；仅 subfinder 属于纯被动外部工具",
     "标准": "只探测主域名建立锚点，httpx / wafw00f 参与",
@@ -112,95 +158,75 @@ PLATFORM_LABELS = [
     ("censys", "Censys"),
 ]
 
-# ---- 视觉系统「哨兵 Sentinel」：量子井（默认）/ 晨档 / 荧灰 ----
-ACCENT = "#2ee6d6"        # 品牌信号色（量子井）
-ACCENT_HOVER = "#5ff0e4"
-ACCENT_DIM = "#0f9488"
-RED = "#ff7b72"
-RED_HOVER = "#ffa198"
-GREEN = "#4ade80"
-ORANGE = "#f5c451"
-GRAY = "#6f8299"          # 次要文字
-TEXT = "#d5e2ee"          # 主文字
-BG = "#060a0f"            # 窗口底色
-PANEL = "#080d13"         # 侧栏
-CARD = "#0b1219"          # 卡片
-CARD_HI = "#101a24"       # 悬停/选中卡片
-STROKE = "#16222e"        # 描边
-STROKE_HI = "#24384a"     # 悬停描边
-HEADER_BG = "#070b10"     # 头栏
+# ---- 视觉系统「晴简 Clear」：简约风，昼白默认 / 夜黑可选 ----
+ACCENT = "#0d6e8c"        # 品牌钢青（昼白）
+ACCENT_HOVER = "#0f85a8"
+ACCENT_DIM = "#0a566e"
+RED = "#c2453a"
+RED_HOVER = "#d95c50"
+GREEN = "#2f8a5b"
+ORANGE = "#b97f1f"
+GRAY = "#6b7684"          # 次要文字
+TEXT = "#1c2733"          # 主文字
+BG = "#f6f7f8"            # 窗口底色（昼白）
+PANEL = "#eef0f2"         # 侧栏
+CARD = "#ffffff"          # 卡片
+CARD_HI = "#f0f6f8"       # 悬停/选中卡片
+STROKE = "#e1e4e8"        # 描边（细淡线）
+STROKE_HI = "#b9c1c9"     # 悬停描边
+HEADER_BG = "#ffffff"     # 头栏
 MONO = "Consolas"         # 等宽字体（Windows 自带）
 
 LOG_PALETTE = {
-    "dark": {"hdr": "#5ff0e4", "good": "#4ade80", "warn": "#f5c451", "norm": "#a4b8c9"},
+    "dark": {"hdr": "#0f85a8", "good": "#2f8a5b", "warn": "#b97f1f", "norm": "#3d4d5c"},
 }
 
-# 默认主题 token（量子井）；切换主题时 apply_theme() 会整体覆盖这些名字
-TREE_BG = "#080d13"
-TREE_FG = "#c9d7e3"
-TREE_HEAD = "#0d1620"
-TREE_SEL = "#104a44"
-LOG_NORM = "#a4b8c9"
-ON_ACCENT = "#03110f"      # 放在品牌色（ACCENT）上的文字颜色，随主题切换
-SIGNAL = "#2ee6d6"         # 选中项左侧信号线颜色
+# 默认主题 token（昼白）；切换主题时 apply_theme() 会整体覆盖这些名字
+TREE_BG = "#ffffff"
+TREE_FG = "#1c2733"
+TREE_HEAD = "#eef0f2"
+TREE_SEL = "#dceef4"
+LOG_NORM = "#3d4d5c"
+ON_ACCENT = "#ffffff"      # 放在品牌色（ACCENT）上的文字颜色，随主题切换
+SIGNAL = "#0d6e8c"         # 选中项左侧信号线颜色
 
 # ---------------------------------------------------------------------------
-# 主题系统（原创设计，非参考品复刻）
+# 主题系统「晴简 Clear」（简约风大改版）
 #
-# 设计语言「哨兵 Sentinel」：
-#   · 深色主题「量子井」——像一口深井：近黑底 + 微弱纵向渐变层次（井壁），
-#     品牌色只用于"信号"（状态点/进度/选中），大面积界面保持安静灰阶
-#   · 浅色主题「晨档」——档案纸感：暖白底 + 细分隔线代替卡片描边，
-#     强调色降饱和为钢青，适合白天与打印截图
-#   · 第三主题「荧灰」——高对比无彩灰 + 单点琥珀强调，给老显示器/投影
-#
-# 与常见安全工具的区别：我们不用"满屏卡片描边"，而是"分区留白 + 一条
-# 2px 信号线"标记选中项；选中态靠"信号线 + 文字变色"而不是整块填充。
+# 与科技风（旧版）的区别：
+#   · 大留白 + 细淡分隔线，去掉满屏描边和霓虹感
+#   · 昼白默认（白天办公舒适自然），夜黑一键切换（夜间作战）
+#   · 强调色降饱和为钢青，只用于信号（状态/进度/选中），不铺大面积
 # ---------------------------------------------------------------------------
 THEMES = {
-    "量子井": {
-        "ACCENT": "#2ee6d6", "ACCENT_HOVER": "#5ff0e4", "ACCENT_DIM": "#0f9488",
-        "RED": "#ff7b72", "RED_HOVER": "#ffa198",
-        "GREEN": "#4ade80", "ORANGE": "#f5c451",
-        "GRAY": "#6f8299", "TEXT": "#d5e2ee",
-        "BG": "#060a0f", "PANEL": "#080d13",
-        "CARD": "#0b1219", "CARD_HI": "#101a24",
-        "STROKE": "#16222e", "STROKE_HI": "#24384a",
-        "HEADER_BG": "#070b10",
-        "TREE_BG": "#080d13", "TREE_FG": "#c9d7e3", "TREE_HEAD": "#0d1620",
-        "TREE_SEL": "#104a44", "LOG_NORM": "#a4b8c9",
-        "ON_ACCENT": "#03110f",
-        "SIGNAL": "#2ee6d6",         # 选中项左侧 2px 信号线
-        "TITLEBAR": False,
-    },
-    "晨档": {
-        "ACCENT": "#0f6e8c", "ACCENT_HOVER": "#1587ad", "ACCENT_DIM": "#0b556d",
+    "昼白": {
+        "ACCENT": "#0d6e8c", "ACCENT_HOVER": "#0f85a8", "ACCENT_DIM": "#0a566e",
         "RED": "#c2453a", "RED_HOVER": "#d95c50",
         "GREEN": "#2f8a5b", "ORANGE": "#b97f1f",
-        "GRAY": "#5c6b7a", "TEXT": "#1d2b38",
-        "BG": "#f7f5f1", "PANEL": "#efece6",
-        "CARD": "#ffffff", "CARD_HI": "#f2ede4",
-        "STROKE": "#ddd8cf", "STROKE_HI": "#b8b2a5",
-        "HEADER_BG": "#f7f5f1",
-        "TREE_BG": "#ffffff", "TREE_FG": "#1d2b38", "TREE_HEAD": "#efece6",
-        "TREE_SEL": "#d7ecf2", "LOG_NORM": "#3d4d5c",
+        "GRAY": "#6b7684", "TEXT": "#1c2733",
+        "BG": "#f6f7f8", "PANEL": "#eef0f2",
+        "CARD": "#ffffff", "CARD_HI": "#f0f6f8",
+        "STROKE": "#e1e4e8", "STROKE_HI": "#b9c1c9",
+        "HEADER_BG": "#ffffff",
+        "TREE_BG": "#ffffff", "TREE_FG": "#1c2733", "TREE_HEAD": "#eef0f2",
+        "TREE_SEL": "#dceef4", "LOG_NORM": "#3d4d5c",
         "ON_ACCENT": "#ffffff",
-        "SIGNAL": "#0f6e8c",
+        "SIGNAL": "#0d6e8c",
         "TITLEBAR": True,
     },
-    "荧灰": {
-        "ACCENT": "#f5a623", "ACCENT_HOVER": "#ffbe4d", "ACCENT_DIM": "#a67217",
-        "RED": "#ff6b6b", "RED_HOVER": "#ff9494",
-        "GREEN": "#7dd87d", "ORANGE": "#f5a623",
-        "GRAY": "#8a949e", "TEXT": "#e8ecee",
-        "BG": "#121417", "PANEL": "#14171a",
-        "CARD": "#171b1f", "CARD_HI": "#1d2329",
-        "STROKE": "#262c33", "STROKE_HI": "#39424c",
-        "HEADER_BG": "#101316",
-        "TREE_BG": "#14171a", "TREE_FG": "#d5dde3", "TREE_HEAD": "#1b2025",
-        "TREE_SEL": "#3d3208", "LOG_NORM": "#b5c0c9",
-        "ON_ACCENT": "#1a1205",
-        "SIGNAL": "#f5a623",
+    "夜黑": {
+        "ACCENT": "#39b8d8", "ACCENT_HOVER": "#63cbe5", "ACCENT_DIM": "#1f7f99",
+        "RED": "#ef8a80", "RED_HOVER": "#ffa198",
+        "GREEN": "#63c98c", "ORANGE": "#e0b055",
+        "GRAY": "#8a97a5", "TEXT": "#dde5ec",
+        "BG": "#111417", "PANEL": "#14181c",
+        "CARD": "#181d22", "CARD_HI": "#1f262d",
+        "STROKE": "#242b32", "STROKE_HI": "#39434c",
+        "HEADER_BG": "#111417",
+        "TREE_BG": "#14181c", "TREE_FG": "#dde5ec", "TREE_HEAD": "#181d22",
+        "TREE_SEL": "#1d3a46", "LOG_NORM": "#a8b6c2",
+        "ON_ACCENT": "#04222b",
+        "SIGNAL": "#39b8d8",
         "TITLEBAR": False,
     },
 }
@@ -208,7 +234,7 @@ THEMES = {
 
 def apply_theme(name):
     """把主题 token 写进模块级常量；布局代码引用这些名字，无需改动。"""
-    t = THEMES.get(name) or THEMES["量子井"]
+    t = THEMES.get(name) or THEMES["昼白"]
     g = sys.modules[__name__]
     for key, val in t.items():
         setattr(g, key, val)
@@ -439,13 +465,21 @@ class App(ctk.CTk):
         self.after(2000, self._tick_eta)
         self.after(3000, self._cruise_poll)
         self.after(250, self._check_terms)
-        # 恢复上次选择的主题（.ui_theme 保存）
+        # 恢复上次选择的主题与语言（.ui_theme / .ui_lang）
         try:
             with open(os.path.join(BASE_DIR, ".ui_theme"), "r",
                       encoding="utf-8") as fh:
                 saved = fh.read().strip()
-            if saved in THEMES and saved != "量子井":
+            if saved in THEMES and saved != "昼白":
                 self._set_theme(saved)
+        except Exception:
+            pass
+        try:
+            with open(os.path.join(BASE_DIR, ".ui_lang"), "r",
+                      encoding="utf-8") as fh:
+                saved_lang = fh.read().strip()
+            if saved_lang in ("zh", "en"):
+                set_lang(saved_lang)
         except Exception:
             pass
 
@@ -590,7 +624,7 @@ class App(ctk.CTk):
         # ---- 底部图例 ----
         legend = ctk.CTkFrame(sb, fg_color="transparent")
         legend.pack(side="bottom", fill="x", padx=18, pady=14)
-        # 主题切换（量子井 / 晨档 / 荧灰）
+        # 主题切换（昼白 / 夜黑）+ 语言切换（中文 / English）
         ctk.CTkLabel(legend, text="// THEME  ·  主题", font=self.f_mono_sm,
                      text_color=GRAY, anchor="w").pack(fill="x")
         self.seg_theme = ctk.CTkSegmentedButton(
@@ -598,7 +632,7 @@ class App(ctk.CTk):
             font=self.f_mono_sm, selected_color=ACCENT,
             selected_hover_color=ACCENT_HOVER, unselected_color=CARD,
             unselected_hover_color=CARD_HI, text_color=TEXT)
-        self.seg_theme.set("量子井")
+        self.seg_theme.set("昼白")
         self.seg_theme.pack(fill="x", pady=(4, 10))
         try:
             with open(os.path.join(BASE_DIR, ".ui_theme"), "r",
@@ -606,6 +640,25 @@ class App(ctk.CTk):
                 saved = fh.read().strip()
             if saved in THEMES:
                 self.seg_theme.set(saved)
+        except Exception:
+            pass
+        # 语言切换（中文 / English）
+        ctk.CTkLabel(legend, text="// LANGUAGE  ·  语言", font=self.f_mono_sm,
+                     text_color=GRAY, anchor="w").pack(fill="x")
+        self.seg_lang = ctk.CTkSegmentedButton(
+            legend, values=["中文", "English"], command=self._on_lang_change,
+            font=self.f_mono_sm, selected_color=ACCENT,
+            selected_hover_color=ACCENT_HOVER, unselected_color=CARD,
+            unselected_hover_color=CARD_HI, text_color=TEXT)
+        self.seg_lang.set("中文")
+        self.seg_lang.pack(fill="x", pady=(4, 10))
+        try:
+            with open(os.path.join(BASE_DIR, ".ui_lang"), "r",
+                      encoding="utf-8") as fh:
+                saved_lang = fh.read().strip()
+            if saved_lang in ("zh", "en"):
+                set_lang(saved_lang)
+                self.seg_lang.set("English" if saved_lang == "en" else "中文")
         except Exception:
             pass
         ctk.CTkLabel(legend, text="// EVIDENCE GRADE", font=self.f_mono_sm,
@@ -633,6 +686,21 @@ class App(ctk.CTk):
             self._set_theme(name)
         except Exception:
             pass
+
+    def _on_lang_change(self, label):
+        lang = "en" if label == "English" else "zh"
+        try:
+            with open(os.path.join(BASE_DIR, ".ui_lang"), "w",
+                      encoding="utf-8") as fh:
+                fh.write(lang)
+        except Exception:
+            pass
+        messagebox.showinfo(
+            tr("语言已切换") if _LANG == "zh" else "Language changed",
+            "界面语言将在下次启动时完全生效。\n语言偏好已保存（%s）。"
+            % ("English" if lang == "en" else "中文")
+            if lang == "en" else
+            "界面语言将在下次启动时完全生效。\n语言偏好已保存（中文）。")
 
     def _refresh_engine_rows(self):
         try:
@@ -834,7 +902,7 @@ class App(ctk.CTk):
             idx.pack(side="left")
             dot = ctk.CTkLabel(top, text="●", font=self.f_mono_sm, text_color="#3d5064")
             dot.pack(side="right")
-            title = ctk.CTkLabel(card, text=name, font=ctk.CTkFont(size=14, weight="bold"),
+            title = ctk.CTkLabel(card, text=tr(name), font=ctk.CTkFont(size=14, weight="bold"),
                                  text_color=TEXT, anchor="w")
             title.grid(row=1, column=0, sticky="w", padx=12)
             code_lbl = ctk.CTkLabel(card, text=code, font=self.f_mono_sm,

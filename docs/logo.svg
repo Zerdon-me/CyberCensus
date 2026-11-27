@@ -1,75 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="CyberCensus logo">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#071019"/>
-      <stop offset="0.55" stop-color="#05080f"/>
-      <stop offset="1" stop-color="#0a1520"/>
-    </linearGradient>
-    <linearGradient id="cyan" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#67e8f9"/>
-      <stop offset="1" stop-color="#0891b2"/>
-    </linearGradient>
-    <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#22d3ee" stop-opacity="0.34"/>
-      <stop offset="1" stop-color="#22d3ee" stop-opacity="0"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#22d3ee" stop-opacity="0.28"/>
-      <stop offset="1" stop-color="#22d3ee" stop-opacity="0"/>
-    </radialGradient>
-    <filter id="soft" x="-45%" y="-45%" width="190%" height="190%">
-      <feGaussianBlur stdDeviation="7"/>
-    </filter>
-  </defs>
-
-  <rect x="8" y="8" width="496" height="496" rx="112" fill="url(#bg)"/>
-  <rect x="8" y="8" width="496" height="496" rx="112" fill="none" stroke="#123243" stroke-width="2"/>
-
-  <!-- faint grid -->
-  <g stroke="#12303f" stroke-width="1" opacity="0.55">
-    <path d="M64 176H448M64 256H448M64 336H448"/>
-    <path d="M176 64V448M256 64V448M336 64V448"/>
-  </g>
-
-  <!-- radar glow + rings -->
-  <circle cx="256" cy="256" r="150" fill="url(#glow)"/>
-  <g fill="none" stroke="url(#cyan)">
-    <circle cx="256" cy="256" r="168" stroke-width="3" opacity="0.9"/>
-    <circle cx="256" cy="256" r="124" stroke-width="2" opacity="0.6"/>
-    <circle cx="256" cy="256" r="82" stroke-width="2" opacity="0.45"/>
-  </g>
-
-  <!-- sweep -->
-  <path d="M256 256 L256 88 A168 168 0 0 1 401 173 Z" fill="url(#sweep)"/>
-  <path d="M256 256 L256 88" stroke="#67e8f9" stroke-width="3" opacity="0.85"/>
-
-  <!-- crosshair -->
-  <g stroke="#22d3ee" stroke-width="2" opacity="0.45">
-    <path d="M256 104V148M256 364V408M104 256H148M364 256H408"/>
-  </g>
-
-  <!-- attribution nodes -->
-  <g stroke="#2dd4bf" stroke-width="2" opacity="0.8">
-    <path d="M256 256 L166 186"/>
-    <path d="M256 256 L352 198"/>
-    <path d="M256 256 L334 344"/>
-    <path d="M256 256 L178 334"/>
-    <path d="M166 186 L352 198"/>
-    <path d="M352 198 L334 344"/>
-  </g>
-  <g>
-    <circle cx="166" cy="186" r="10" fill="#34d399"/>
-    <circle cx="352" cy="198" r="10" fill="#22d3ee"/>
-    <circle cx="334" cy="344" r="10" fill="#fbbf24"/>
-    <circle cx="178" cy="334" r="10" fill="#22d3ee"/>
-  </g>
-  <circle cx="166" cy="186" r="18" fill="#34d399" opacity="0.18" filter="url(#soft)"/>
-  <circle cx="334" cy="344" r="18" fill="#fbbf24" opacity="0.18" filter="url(#soft)"/>
-
-  <!-- center mark: layered shield + C -->
-  <path d="M256 196 L310 220 V274 C310 306 286 326 256 338 C226 326 202 306 202 274 V220 Z"
-        fill="#071019" stroke="#67e8f9" stroke-width="4"/>
-  <path d="M280 236 C272 229 262 226 253 227 C237 228 226 241 226 257 C226 274 238 286 254 286 C264 286 273 282 280 275"
-        fill="none" stroke="#67e8f9" stroke-width="9" stroke-linecap="round"/>
-  <circle cx="256" cy="257" r="6" fill="#fbbf24"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- CyberCensus 简约 logo：钢青圆环 C + 三枚资产点 -->
+  <rect width="256" height="256" rx="56" fill="#f6f7f8"/>
+  <circle cx="128" cy="128" r="72" fill="none" stroke="#0d6e8c" stroke-width="22"
+          stroke-linecap="round"
+          stroke-dasharray="339 113"
+          transform="rotate(35 128 128)"/>
+  <circle cx="188" cy="96" r="16" fill="#0d6e8c"/>
+  <circle cx="188" cy="160" r="10" fill="#2f8a5b"/>
+  <circle cx="128" cy="196" r="8" fill="#b97f1f"/>
 </svg>

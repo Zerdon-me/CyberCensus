@@ -26,6 +26,7 @@ dist/
 .terms_accepted
 .ui_theme
 .ui_geometry
+.ui_lang
 .env
 .env.*
 .upload_token

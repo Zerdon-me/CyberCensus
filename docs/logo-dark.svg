@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- CyberCensus 简约 logo（深色底版）：信号青圆环 C + 三枚资产点 -->
+  <rect width="256" height="256" rx="56" fill="#111417"/>
+  <circle cx="128" cy="128" r="72" fill="none" stroke="#39b8d8" stroke-width="22"
+          stroke-linecap="round"
+          stroke-dasharray="339 113"
+          transform="rotate(35 128 128)"/>
+  <circle cx="188" cy="96" r="16" fill="#39b8d8"/>
+  <circle cx="188" cy="160" r="10" fill="#63c98c"/>
+  <circle cx="128" cy="196" r="8" fill="#e0b055"/>
+</svg>
