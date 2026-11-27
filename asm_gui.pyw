@@ -374,12 +374,28 @@ class App(ctk.CTk):
                     self.iconbitmap(ico)
         except Exception:
             pass
-        w, h = 1180, 860
+        # 窗口自适应：默认尽量铺满屏幕（留任务栏余量），打开即可看全功能，
+        # 不用再手动缩放；上次窗口尺寸保存在 .ui_geometry
         sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
-        self.geometry("%dx%d+%d+%d" % (w, h, max(0, (sw - w) // 2),
-                                       max(0, (sh - h) // 2 - 24)))
-        self.minsize(1040, 700)
+        saved = ""
+        try:
+            with open(os.path.join(BASE_DIR, ".ui_geometry"), "r",
+                      encoding="utf-8") as fh:
+                saved = fh.read().strip()
+        except Exception:
+            pass
+        if saved and re.match(r"^\d+x\d+", saved):
+            self.geometry(saved)
+        else:
+            w = max(1200, min(1560, sw - 120))
+            h = max(820, min(1020, sh - 130))
+            self.geometry("%dx%d+%d+%d" % (w, h, max(0, (sw - w) // 2),
+                                           max(0, (sh - h) // 2 - 12)))
+        if sw >= 1280 and sh >= 900:
+            self.state("zoomed")       # 常见桌面分辨率直接最大化
+        self.minsize(1024, 680)
         self.configure(fg_color=BG)
+        self.bind("<Configure>", self._save_geometry)
 
         # 字体阶梯（等宽字体营造终端/仪表盘观感）
         self.f_brand = ctk.CTkFont(family=MONO, size=21, weight="bold")
@@ -473,6 +489,21 @@ class App(ctk.CTk):
         # 底部品牌色细线
         ctk.CTkFrame(bar, height=1, fg_color="#123b4a"
                      ).grid(row=2, column=0, columnspan=5, sticky="ew")
+
+    def _save_geometry(self, event):
+        """窗口尺寸变化时记录（最大化时不覆盖，避免记下 0 尺寸）。"""
+        if event.widget is not self:
+            return
+        try:
+            if self.state() == "zoomed":
+                return
+            w, h = self.winfo_width(), self.winfo_height()
+            if w > 200 and h > 200:
+                with open(os.path.join(BASE_DIR, ".ui_geometry"), "w",
+                          encoding="utf-8") as fh:
+                    fh.write("%dx%d" % (w, h))
+        except Exception:
+            pass
 
     def _set_status(self, text, color):
         self.var_status.set(text)

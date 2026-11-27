@@ -25,6 +25,7 @@ dist/
 # 运行期/本地敏感文件
 .terms_accepted
 .ui_theme
+.ui_geometry
 .env
 .env.*
 .upload_token
