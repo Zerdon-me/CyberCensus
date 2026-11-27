@@ -134,6 +134,58 @@ LOG_PALETTE = {
     "dark": {"hdr": "#67e8f9", "good": "#34d399", "warn": "#fbbf24", "norm": "#a8bccf"},
 }
 
+# 默认主题 token（深空黑）；切换主题时 apply_theme() 会整体覆盖这些名字
+TREE_BG = "#080e16"
+TREE_FG = "#c6d6e4"
+TREE_HEAD = "#101b28"
+TREE_SEL = "#0e7490"
+LOG_NORM = "#a8bccf"
+ON_ACCENT = "#04141a"      # 放在品牌色（ACCENT）上的文字颜色，随主题切换
+
+# ---------------------------------------------------------------------------
+# 主题系统：深空黑（默认）+ 极昼浅色。两套 token 全量对齐，
+# 换主题只改字典，不动任何布局代码（TscanPlus/Reqable 那种"设置里切主题"体验）。
+# ---------------------------------------------------------------------------
+THEMES = {
+    "深空黑": {
+        "ACCENT": "#22d3ee", "ACCENT_HOVER": "#67e8f9", "ACCENT_DIM": "#0e7490",
+        "RED": "#f87171", "RED_HOVER": "#fca5a5",
+        "GREEN": "#34d399", "ORANGE": "#fbbf24",
+        "GRAY": "#71859a", "TEXT": "#dbe7f3",
+        "BG": "#05070d", "PANEL": "#090f18",
+        "CARD": "#0d1520", "CARD_HI": "#101b2a",
+        "STROKE": "#1b2b3d", "STROKE_HI": "#2b4359",
+        "HEADER_BG": "#070c13",
+        "TREE_BG": "#080e16", "TREE_FG": "#c6d6e4", "TREE_HEAD": "#101b28",
+        "TREE_SEL": "#0e7490", "LOG_NORM": "#a8bccf",
+        "ON_ACCENT": "#04141a",
+        "TITLEBAR": False,           # 不用系统标题栏（自绘深色头栏）
+    },
+    "极昼": {
+        "ACCENT": "#0369a1", "ACCENT_HOVER": "#0284c7", "ACCENT_DIM": "#075985",
+        "RED": "#dc2626", "RED_HOVER": "#ef4444",
+        "GREEN": "#059669", "ORANGE": "#d97706",
+        "GRAY": "#64748b", "TEXT": "#0f172a",
+        "BG": "#f4f7fb", "PANEL": "#e8eef6",
+        "CARD": "#ffffff", "CARD_HI": "#eaf3fd",
+        "STROKE": "#cbd5e1", "STROKE_HI": "#94a3b8",
+        "HEADER_BG": "#ffffff",
+        "TREE_BG": "#ffffff", "TREE_FG": "#0f172a", "TREE_HEAD": "#e2e8f0",
+        "TREE_SEL": "#0284c7", "LOG_NORM": "#334155",
+        "ON_ACCENT": "#ffffff",
+        "TITLEBAR": True,            # 用系统标题栏（浅色主题自绘头栏违和）
+    },
+}
+
+
+def apply_theme(name):
+    """把主题 token 写进模块级常量；布局代码引用这些名字，无需改动。"""
+    t = THEMES.get(name) or THEMES["深空黑"]
+    g = sys.modules[__name__]
+    for key, val in t.items():
+        setattr(g, key, val)
+    return t
+
 
 # ---------------------------------------------------------------------------
 # 纯辅助函数（不依赖窗口，便于单元测试）
@@ -343,12 +395,22 @@ class App(ctk.CTk):
         self.after(2000, self._tick_eta)
         self.after(3000, self._cruise_poll)
         self.after(250, self._check_terms)
+        # 恢复上次选择的主题（.ui_theme 保存）
+        try:
+            with open(os.path.join(BASE_DIR, ".ui_theme"), "r",
+                      encoding="utf-8") as fh:
+                saved = fh.read().strip()
+            if saved in THEMES and saved != "深空黑":
+                self._set_theme(saved)
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # 品牌头栏（横贯顶部）
     # ------------------------------------------------------------------
     def _build_header(self):
         bar = ctk.CTkFrame(self, corner_radius=0, fg_color=HEADER_BG)
+        self._header = bar
         bar.grid(row=0, column=0, columnspan=2, sticky="ew")
         bar.grid_columnconfigure(1, weight=1)
 
@@ -469,6 +531,24 @@ class App(ctk.CTk):
         # ---- 底部图例 ----
         legend = ctk.CTkFrame(sb, fg_color="transparent")
         legend.pack(side="bottom", fill="x", padx=18, pady=14)
+        # 主题切换（深空黑 / 极昼）
+        ctk.CTkLabel(legend, text="// THEME  ·  主题", font=self.f_mono_sm,
+                     text_color=GRAY, anchor="w").pack(fill="x")
+        self.seg_theme = ctk.CTkSegmentedButton(
+            legend, values=list(THEMES.keys()), command=self._on_theme_change,
+            font=self.f_mono_sm, selected_color=ACCENT,
+            selected_hover_color=ACCENT_HOVER, unselected_color=CARD,
+            unselected_hover_color=CARD_HI, text_color=TEXT)
+        self.seg_theme.set("深空黑")
+        self.seg_theme.pack(fill="x", pady=(4, 10))
+        try:
+            with open(os.path.join(BASE_DIR, ".ui_theme"), "r",
+                      encoding="utf-8") as fh:
+                saved = fh.read().strip()
+            if saved in THEMES:
+                self.seg_theme.set(saved)
+        except Exception:
+            pass
         ctk.CTkLabel(legend, text="// EVIDENCE GRADE", font=self.f_mono_sm,
                      text_color=GRAY, anchor="w").pack(fill="x")
         for color, label in ((GREEN, "确认 · 强证据 ≥1"),
@@ -483,6 +563,18 @@ class App(ctk.CTk):
     # ------------------------------------------------------------------
     # 主工作区
     # ------------------------------------------------------------------
+    def _on_theme_change(self, name):
+        try:
+            with open(os.path.join(BASE_DIR, ".ui_theme"), "w",
+                      encoding="utf-8") as fh:
+                fh.write(name)
+        except Exception:
+            pass
+        try:
+            self._set_theme(name)
+        except Exception:
+            pass
+
     def _refresh_engine_rows(self):
         try:
             avail = set(cybercensus.ext_available())
@@ -612,7 +704,7 @@ class App(ctk.CTk):
 
         btn_check = ctk.CTkButton(row, text="检查更新", width=110, height=32,
                                   corner_radius=8, fg_color=ACCENT,
-                                  text_color="#04141a", hover_color=ACCENT_HOVER,
+                                  text_color=ON_ACCENT, hover_color=ACCENT_HOVER,
                                   command=check, font=self.f_body)
         btn_check.pack(side="left")
         btn_update = ctk.CTkButton(row, text="一键更新", width=110, height=32,
@@ -728,7 +820,7 @@ class App(ctk.CTk):
         self.btn_start = ctk.CTkButton(
             frm_run, text="▶  开始测绘 · 标准", width=200, height=42, corner_radius=9,
             font=ctk.CTkFont(size=15, weight="bold"), fg_color=ACCENT,
-            hover_color=ACCENT_HOVER, text_color="#04141a", command=self._on_start)
+            hover_color=ACCENT_HOVER, text_color=ON_ACCENT, command=self._on_start)
         self.btn_start.pack(side="left")
         self.btn_stop = ctk.CTkButton(
             frm_run, text="⏹ 停止并输出", width=128, height=42, corner_radius=9,
@@ -888,7 +980,8 @@ class App(ctk.CTk):
         frm_done.pack(side="bottom", fill="x", pady=(8, 0), before=self.tabview)
         self.btn_report = ctk.CTkButton(
             frm_done, text="⬇  生成报告…", width=150, height=38, corner_radius=8,
-            fg_color=ACCENT, hover_color=ACCENT_HOVER, text_color="#04141a",
+            fg_color=ACCENT, hover_color=ACCENT_HOVER,
+            text_color=ON_ACCENT,
             text_color_disabled="#0b3b45",
             font=ctk.CTkFont(size=13, weight="bold"),
             state="disabled", command=self._open_report_dialog)
@@ -1099,7 +1192,7 @@ class App(ctk.CTk):
         frm = ctk.CTkFrame(win, fg_color="transparent")
         frm.pack(fill="x", padx=20, pady=(6, 12))
         ctk.CTkButton(frm, text="完成", width=110, height=32, corner_radius=8,
-                      fg_color=ACCENT, hover_color=ACCENT_HOVER, text_color="#04141a",
+                      fg_color=ACCENT, hover_color=ACCENT_HOVER, text_color=ON_ACCENT,
                       font=ctk.CTkFont(size=13, weight="bold"),
                       command=win.withdraw).pack(side="right")
 
@@ -1171,7 +1264,7 @@ class App(ctk.CTk):
         self.btn_cruise_stop.pack(side="right")
         self.btn_cruise_start = ctk.CTkButton(
             top, text="▶ 启动后台巡航", width=124, fg_color=ACCENT,
-            text_color="#04141a", command=self._cruise_start)
+            text_color=ON_ACCENT, command=self._cruise_start)
         self.btn_cruise_start.pack(side="right", padx=6)
         ctk.CTkButton(top, text="立即执行一次", width=100,
                       command=self._cruise_once).pack(side="right", padx=6)
@@ -1396,9 +1489,9 @@ class App(ctk.CTk):
 
     # ---- 表格样式 ----
     def _style_treeview(self):
-        """给 ttk.Treeview 套深色样式（CTk 不带表格控件，嵌入原生 Treeview）。"""
+        """给 ttk.Treeview 套当前主题样式（CTk 不带表格控件，嵌入原生 Treeview）。"""
         import tkinter.ttk as ttk
-        bg, fg, head, sel = "#080e16", "#c6d6e4", "#101b28", "#0e7490"
+        bg, fg, head, sel = TREE_BG, TREE_FG, TREE_HEAD, TREE_SEL
         style = ttk.Style(self)
         try:
             style.theme_use("clam")
@@ -1408,8 +1501,57 @@ class App(ctk.CTk):
                         rowheight=30, borderwidth=0, font=("", 12))
         style.configure("Treeview.Heading", background=head, foreground=fg,
                         relief="flat", font=("", 12, "bold"))
-        style.map("Treeview", background=[("selected", sel)])
+        style.map("Treeview", background=[("selected", sel)],
+                  foreground=[("selected", "#ffffff" if sel == TREE_SEL and BG[0] == "#"
+                               else fg)])
         style.map("Treeview.Heading", background=[("active", head)])
+
+    # ---- 主题切换 ----
+    def _set_theme(self, name):
+        apply_theme(name)
+        t = THEMES[name]
+        try:
+            ctk.set_appearance_mode("dark" if not t["TITLEBAR"] else "light")
+        except Exception:
+            pass
+        try:
+            self.configure(fg_color=BG)
+            self._header.configure(fg_color=HEADER_BG)
+            self._sidebar.configure(fg_color=PANEL)
+        except Exception:
+            pass
+        for root in (self._header, self._sidebar):
+            for w in self._walk_widgets(root):
+                self._recolor(w)
+        self._style_treeview()
+        self._apply_log_palette("dark")
+        self._select_mode(self._mode)
+        self._apply_card_styles()
+        self._render_assets()
+
+    def _walk_widgets(self, root):
+        out = []
+        stack = [root]
+        while stack:
+            w = stack.pop()
+            out.append(w)
+            try:
+                stack.extend(w.winfo_children())
+            except Exception:
+                pass
+        return out
+
+    def _recolor(self, w):
+        """按控件类型把新主题颜色刷上去（尽力而为，属性不存在就跳过）。"""
+        cls = w.winfo_class()
+        try:
+            if cls == "CTkFrame":
+                # 卡片底色 vs 面板底色：卡片画在侧栏/主区内，用 CARD
+                w.configure(fg_color=CARD)
+            elif cls == "CTkLabel":
+                w.configure(text_color=TEXT)
+        except Exception:
+            pass
 
     def _on_tab_change(self):
         pass   # 预留：点击标签页时的钩子
@@ -1844,7 +1986,9 @@ class App(ctk.CTk):
                                   values=(track, seller, bundle, reason))
 
     def _apply_log_palette(self, mode):
-        for tag, color in LOG_PALETTE[mode].items():
+        pal = dict(LOG_PALETTE[mode])
+        pal["norm"] = LOG_NORM     # 跟随主题
+        for tag, color in pal.items():
             try:
                 self.txt_log.tag_config(tag, foreground=color)
             except Exception:
@@ -1985,7 +2129,7 @@ class App(ctk.CTk):
                       text_color=GRAY, hover_color=CARD_HI,
                       command=self.destroy).pack(side="right")
         btn = ctk.CTkButton(row, text="同意并继续", width=120,
-                            fg_color=ACCENT, text_color="#04141a",
+                            fg_color=ACCENT, text_color=ON_ACCENT,
                             hover_color=ACCENT_HOVER, state="disabled",
                             command=lambda: self._accept_terms(win))
         btn.pack(side="right", padx=8)
@@ -2040,7 +2184,7 @@ class App(ctk.CTk):
                           "https://github.com/Zerdon-me/CyberCensus")
                       ).pack(side="left", padx=8)
         ctk.CTkButton(row, text="关闭", width=80,
-                      fg_color=ACCENT, text_color="#04141a",
+                      fg_color=ACCENT, text_color=ON_ACCENT,
                       hover_color=ACCENT_HOVER,
                       command=win.destroy).pack(side="right")
 
